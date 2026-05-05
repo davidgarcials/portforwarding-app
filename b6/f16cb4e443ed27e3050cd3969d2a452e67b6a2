@@ -1,0 +1,23 @@
+Resources/Info.plist
+  b7ea9b1da33640ad 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "b6f16cb4e443ed27e3050cd3969d2a452e67b6a2",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 7,
+      "accepted_lines": 3271,
+      "overriden_lines": 0
+    }
+  }
+}
