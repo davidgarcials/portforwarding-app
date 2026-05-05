@@ -11,6 +11,38 @@
 
 ---
 
+## Screenshots
+
+### Menu bar icon
+The app lives in the macOS menu bar as a minimal icon, always accessible.
+
+<p align="center">
+  <img src="Resources/screenshots/menubar-icon.png" alt="Menu bar icon" width="600"/>
+</p>
+
+### Quick access popover
+Click the icon to see all your port forwards at a glance with live status indicators and start/stop controls.
+
+<p align="center">
+  <img src="Resources/screenshots/menubar-popover.png" alt="Menu bar popover" width="400"/>
+</p>
+
+### Settings window
+Manage all your port forward configurations — connect, disconnect, edit, or delete entries. Use **Connect All** to start everything at once.
+
+<p align="center">
+  <img src="Resources/screenshots/settings-window.png" alt="Settings window" width="700"/>
+</p>
+
+### Add forward with kubectl discovery
+Add new forwards by browsing namespaces and services directly from your cluster — no manual typing needed.
+
+<p align="center">
+  <img src="Resources/screenshots/add-forward.png" alt="Add forward form" width="500"/>
+</p>
+
+---
+
 ## Features
 
 - **Menu bar popover** with status dots (green/yellow/red/gray) and per-forward start/stop controls
@@ -49,7 +81,7 @@ The app bundle is created at `build/PortForwarding.app`. Copy it to `/Applicatio
 
 ## Usage
 
-1. **Launch** the app — a network icon appears in the menu bar
+1. **Launch** the app — a custom icon appears in the menu bar
 2. **Click** the icon to see all configured forwards with their connection status
 3. **Start/stop** individual forwards with the play/stop buttons, or use **Connect All** / **Disconnect All**
 4. **Add forwards** via the gear icon → Settings → Add Forward, which discovers namespaces and services from your cluster
