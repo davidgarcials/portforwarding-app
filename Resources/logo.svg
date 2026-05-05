@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#10b981"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="url(#bg)"/>
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="url(#accent)" stroke-width="3" opacity="0.4"/>
+
+  <!-- Left server node -->
+  <rect x="80" y="180" width="100" height="152" rx="12" fill="none" stroke="url(#accent)" stroke-width="4"/>
+  <circle cx="130" cy="216" r="8" fill="#22c55e"/>
+  <line x1="106" y1="240" x2="154" y2="240" stroke="#334155" stroke-width="2"/>
+  <circle cx="130" cy="264" r="8" fill="#22c55e"/>
+  <line x1="106" y1="288" x2="154" y2="288" stroke="#334155" stroke-width="2"/>
+  <circle cx="130" cy="312" r="8" fill="#facc15"/>
+
+  <!-- Right server node -->
+  <rect x="332" y="180" width="100" height="152" rx="12" fill="none" stroke="url(#accent)" stroke-width="4"/>
+  <circle cx="382" cy="216" r="8" fill="#22c55e"/>
+  <line x1="358" y1="240" x2="406" y2="240" stroke="#334155" stroke-width="2"/>
+  <circle cx="382" cy="264" r="8" fill="#22c55e"/>
+  <line x1="358" y1="288" x2="406" y2="288" stroke="#334155" stroke-width="2"/>
+  <circle cx="382" cy="312" r="8" fill="#22c55e"/>
+
+  <!-- Connection arrows -->
+  <line x1="180" y1="216" x2="332" y2="216" stroke="url(#green)" stroke-width="3" stroke-dasharray="8,4"/>
+  <polygon points="324,210 336,216 324,222" fill="#22c55e"/>
+
+  <line x1="180" y1="264" x2="332" y2="264" stroke="url(#green)" stroke-width="3" stroke-dasharray="8,4"/>
+  <polygon points="324,258 336,264 324,270" fill="#22c55e"/>
+
+  <line x1="180" y1="312" x2="332" y2="312" stroke="url(#green)" stroke-width="3" stroke-dasharray="8,4"/>
+  <polygon points="324,306 336,312 324,318" fill="#22c55e"/>
+
+  <!-- Central tunnel icon -->
+  <circle cx="256" cy="256" r="36" fill="none" stroke="url(#accent)" stroke-width="3" opacity="0.3"/>
+  <path d="M244 244 L256 232 L268 244" fill="none" stroke="url(#accent)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M244 268 L256 280 L268 268" fill="none" stroke="url(#accent)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="256" y1="236" x2="256" y2="276" stroke="url(#accent)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- "PF" text -->
+  <text x="256" y="420" text-anchor="middle" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="64" font-weight="700" fill="url(#accent)">PF</text>
+  <text x="256" y="452" text-anchor="middle" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="20" font-weight="400" fill="#64748b">port forward</text>
+</svg>

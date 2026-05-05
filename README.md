@@ -1,11 +1,22 @@
-# PortForwarding App
+<p align="center">
+  <img src="Resources/logo.svg" alt="PortForwarding App" width="200"/>
+</p>
 
-A native macOS menu bar application for managing `kubectl port-forward` connections. Start, stop, and monitor multiple port forwards from a single interface instead of juggling terminal windows.
+<h1 align="center">PortForwarding App</h1>
+
+<p align="center">
+  A native macOS menu bar application for managing <code>kubectl port-forward</code> connections.<br/>
+  Start, stop, and monitor multiple port forwards from a single interface instead of juggling terminal windows.
+</p>
+
+---
 
 ## Features
 
-- **Menu bar popover** with status dots (green/yellow/red/gray) and per-forward controls
-- **Settings window** for adding, editing, and deleting port forward configurations
+- **Menu bar popover** with status dots (green/yellow/red/gray) and per-forward start/stop controls
+- **Settings window** for managing port forward configurations
+- **Kubectl discovery** — add new forwards by browsing namespaces, services, and ports directly from your cluster
+- **Service port details** — see available ports with type (grpc, http, metrics) and target port info
 - **Connect All** launches all enabled forwards sequentially
 - **Port conflict detection** prevents starting two forwards on the same local port
 - **Startup detection** checks which ports are already listening and initializes state accordingly
@@ -34,7 +45,24 @@ make run
 make clean
 ```
 
-The app bundle is created at `build/PortForwarding.app`. You can copy it to `/Applications` or run it from anywhere.
+The app bundle is created at `build/PortForwarding.app`. Copy it to `/Applications` or run it from anywhere.
+
+## Usage
+
+1. **Launch** the app — a network icon appears in the menu bar
+2. **Click** the icon to see all configured forwards with their connection status
+3. **Start/stop** individual forwards with the play/stop buttons, or use **Connect All** / **Disconnect All**
+4. **Add forwards** via the gear icon → Settings → Add Forward, which discovers namespaces and services from your cluster
+5. **Monitor** — the app checks port health every 10 seconds and updates status automatically
+
+### Status indicators
+
+| Color  | Meaning |
+|--------|---------|
+| Green  | Connected and port is responding |
+| Yellow | Connecting / waiting for readiness |
+| Gray   | Idle / stopped |
+| Red    | Failed or disconnected |
 
 ## Configuration
 
@@ -74,11 +102,19 @@ Example entry:
 
 ```
 Sources/
-├── App/            # SwiftUI views (@main, MenuBarView, SettingsView)
-├── Domain/         # Business logic (ForwardManager, ConfigStore, PortForward model)
-└── Process/        # Child process management (ProcessRunner)
+├── App/              # SwiftUI views (@main, MenuBarView, SettingsView)
+├── Domain/           # Business logic (ForwardManager, ConfigStore, PortForward, KubectlDiscovery)
+└── Process/          # Child process management (ProcessRunner)
 ```
 
-- **ForwardManager** is the central `ObservableObject` — owns state, orchestrates connections, runs health checks
-- **ProcessRunner** wraps `Foundation.Process`, detects readiness via stdout marker (`Forwarding from`), and reports process death
-- **PortChecker** probes local ports via TCP to detect existing connections
+| Component | Responsibility |
+|-----------|----------------|
+| **ForwardManager** | Central `ObservableObject` — owns state, orchestrates connections, runs health checks |
+| **ProcessRunner** | Wraps `Foundation.Process`, detects readiness via stdout marker (`Forwarding from`), reports process death |
+| **ConfigStore** | JSON persistence with atomic writes to `~/Library/Application Support/` |
+| **KubectlDiscovery** | Fetches namespaces and services from kubectl for the add-forward form |
+| **PortChecker** | TCP probe on local ports to detect existing connections |
+
+## License
+
+Private project.
