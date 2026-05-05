@@ -1,0 +1,29 @@
+Sources/App/SettingsView.swift
+  b7ea9b1da33640ad 183-189,195-200,202-211,214-222,225-226,228-331,344-373,380-382,392-393,395
+Sources/Domain/KubectlDiscovery.swift
+  b7ea9b1da33640ad 1-89
+Sources/App/MenuBarView.swift
+  b7ea9b1da33640ad 8-11,16-26,41-44
+.claude/hud-budget.json
+  b7ea9b1da33640ad 2,6-8,11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "d79704a418be462c1f111604d3bf2251222bcea0",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 375,
+      "total_deletions": 70,
+      "accepted_lines": 3512,
+      "overriden_lines": 0
+    }
+  }
+}
