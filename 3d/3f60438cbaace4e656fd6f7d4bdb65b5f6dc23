@@ -1,0 +1,25 @@
+.claude/hud-budget.json
+  b7ea9b1da33640ad 2,6-8,11
+Sources/Domain/ForwardManager.swift
+  b7ea9b1da33640ad 24-25,27-31,34,40,54-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "3d3f60438cbaace4e656fd6f7d4bdb65b5f6dc23",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 46,
+      "total_deletions": 6,
+      "accepted_lines": 2634,
+      "overriden_lines": 0
+    }
+  }
+}
