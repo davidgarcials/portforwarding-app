@@ -43,6 +43,10 @@ public final class ForwardManager: ObservableObject {
             for fwd in enabled {
                 if Task.isCancelled { break }
                 if states[fwd.id] == .ready { continue }
+                if hasPortConflict(fwd) {
+                    states[fwd.id] = .failed("Port \(fwd.localPort) already in use by another forward")
+                    continue
+                }
                 await connect(fwd)
             }
             isConnectingAll = false
@@ -55,6 +59,11 @@ public final class ForwardManager: ObservableObject {
     }
 
     public func connect(_ forward: PortForward) async {
+        if hasPortConflict(forward) {
+            states[forward.id] = .failed("Port \(forward.localPort) already in use by another forward")
+            return
+        }
+
         let runner = runnerFactory.makeRunner(for: forward)
         runners[forward.id] = runner
         states[forward.id] = .starting
@@ -102,5 +111,14 @@ public final class ForwardManager: ObservableObject {
     public func saveConfig() {
         let config = AppConfig(forwards: forwards)
         try? configStore.save(config)
+    }
+
+    private func hasPortConflict(_ forward: PortForward) -> Bool {
+        for fwd in forwards where fwd.id != forward.id && fwd.localPort == forward.localPort {
+            if states[fwd.id] == .ready || states[fwd.id] == .starting {
+                return true
+            }
+        }
+        return false
     }
 }

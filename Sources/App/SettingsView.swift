@@ -56,7 +56,7 @@ struct ForwardSettingsRow: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(forward.name).font(.headline)
-                Text("\(forward.awsProfile) → \(forward.target):\(forward.remotePort) → localhost:\(forward.localPort)")
+                Text("svc/\(forward.service) (\(forward.namespace)) → localhost:\(forward.localPort)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -78,10 +78,8 @@ struct ForwardFormView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var name: String = ""
-    @State private var awsProfile: String = ""
-    @State private var region: String = "eu-west-1"
-    @State private var target: String = ""
-    @State private var remoteHost: String = ""
+    @State private var service: String = ""
+    @State private var namespace: String = ""
     @State private var remotePort: String = ""
     @State private var localPort: String = ""
     @State private var enabled: Bool = true
@@ -100,10 +98,8 @@ struct ForwardFormView: View {
     private var formFields: some View {
         Form {
             TextField("Name", text: $name)
-            TextField("AWS Profile", text: $awsProfile)
-            TextField("Region", text: $region)
-            TextField("Target (Instance ID)", text: $target)
-            TextField("Remote Host (optional)", text: $remoteHost)
+            TextField("Service (e.g. lec-multitenant-api)", text: $service)
+            TextField("Namespace", text: $namespace)
             TextField("Remote Port", text: $remotePort)
             TextField("Local Port", text: $localPort)
             TextField("Sort Order", text: $sortOrder)
@@ -116,17 +112,15 @@ struct ForwardFormView: View {
             Button("Cancel") { dismiss() }
             Spacer()
             Button("Save") { saveForward() }
-                .disabled(name.isEmpty || awsProfile.isEmpty || target.isEmpty || remotePort.isEmpty || localPort.isEmpty)
+                .disabled(name.isEmpty || service.isEmpty || namespace.isEmpty || remotePort.isEmpty || localPort.isEmpty)
         }
     }
 
     private func populateFromForward() {
         guard let fwd = forward else { return }
         name = fwd.name
-        awsProfile = fwd.awsProfile
-        region = fwd.region
-        target = fwd.target
-        remoteHost = fwd.remoteHost ?? ""
+        service = fwd.service
+        namespace = fwd.namespace
         remotePort = String(fwd.remotePort)
         localPort = String(fwd.localPort)
         enabled = fwd.enabled
@@ -137,12 +131,10 @@ struct ForwardFormView: View {
         let fwd = PortForward(
             id: forward?.id ?? UUID(),
             name: name,
-            awsProfile: awsProfile,
-            region: region,
-            target: target,
-            remoteHost: remoteHost.isEmpty ? nil : remoteHost,
-            remotePort: Int(remotePort) ?? 0,
+            service: service,
+            namespace: namespace,
             localPort: Int(localPort) ?? 0,
+            remotePort: Int(remotePort) ?? 0,
             enabled: enabled,
             sortOrder: Int(sortOrder) ?? 0
         )

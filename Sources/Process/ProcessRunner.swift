@@ -20,9 +20,9 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
     private var continuationResolved = false
 
     public init(
-        executablePath: String = "/usr/local/bin/aws-vault",
+        executablePath: String = "/usr/local/bin/kubectl",
         arguments: [String],
-        readinessMarker: String = "Waiting for connections...",
+        readinessMarker: String = "Forwarding from",
         timeoutSeconds: Double = 60
     ) {
         self.executablePath = executablePath

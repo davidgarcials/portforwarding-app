@@ -56,80 +56,44 @@ func testAsync(_ name: String, _ body: @escaping () async throws -> Void) async 
 // MARK: - PortForward Tests
 
 func makeForward(
-    remoteHost: String? = nil,
-    remotePort: Int = 5432,
-    localPort: Int = 5432,
-    target: String = "i-0abc123",
-    awsProfile: String = "prod",
-    region: String = "eu-west-1"
+    name: String = "test",
+    service: String = "my-svc",
+    namespace: String = "default",
+    localPort: Int = 8080,
+    remotePort: Int = 80
 ) -> PortForward {
     PortForward(
-        name: "test",
-        awsProfile: awsProfile,
-        region: region,
-        target: target,
-        remoteHost: remoteHost,
-        remotePort: remotePort,
-        localPort: localPort
+        name: name,
+        service: service,
+        namespace: namespace,
+        localPort: localPort,
+        remotePort: remotePort
     )
 }
 
 print("\n=== PortForward Model Tests ===")
 
-test("Direct mode when remoteHost is nil") {
-    let fwd = makeForward()
-    assert(!fwd.isRemoteHostMode, "should not be remote host mode")
-    assertEqual(fwd.documentName, "AWS-StartPortForwardingSession")
-}
-
-test("Direct mode when remoteHost is empty") {
-    let fwd = makeForward(remoteHost: "")
-    assert(!fwd.isRemoteHostMode, "empty string should be direct mode")
-}
-
-test("Remote host mode") {
-    let fwd = makeForward(remoteHost: "mydb.rds.amazonaws.com")
-    assert(fwd.isRemoteHostMode, "should be remote host mode")
-    assertEqual(fwd.documentName, "AWS-StartPortForwardingSessionToRemoteHost")
-}
-
-test("SSM parameters direct mode") {
-    let fwd = makeForward(remotePort: 3306, localPort: 3307)
-    let params = fwd.ssmParameters
-    assertEqual(params["portNumber"], ["3306"])
-    assertEqual(params["localPortNumber"], ["3307"])
-    assertNil(params["host"])
-}
-
-test("SSM parameters remote host mode") {
-    let fwd = makeForward(remoteHost: "mydb.rds.amazonaws.com", remotePort: 5432, localPort: 5433)
-    let params = fwd.ssmParameters
-    assertEqual(params["host"], ["mydb.rds.amazonaws.com"])
-    assertEqual(params["portNumber"], ["5432"])
-    assertEqual(params["localPortNumber"], ["5433"])
-}
-
-test("Launch arguments direct mode") {
-    let fwd = makeForward(target: "i-0abc", awsProfile: "prod", region: "eu-west-1")
+test("Launch arguments") {
+    let fwd = makeForward(service: "lec-multitenant-api", namespace: "lec-staging", localPort: 3010, remotePort: 80)
     let args = fwd.launchArguments
-    assertEqual(args[0], "exec")
-    assertEqual(args[1], "prod")
-    assertEqual(args[2], "--")
-    assert(args.contains("--target"), "should contain --target")
-    assert(args.contains("i-0abc"), "should contain target ID")
-    assert(args.contains("AWS-StartPortForwardingSession"), "should contain document name")
-}
-
-test("Launch arguments remote host mode") {
-    let fwd = makeForward(remoteHost: "mydb.rds.amazonaws.com")
-    assert(fwd.launchArguments.contains("AWS-StartPortForwardingSessionToRemoteHost"), "should use remote host document")
+    assertEqual(args[0], "port-forward")
+    assertEqual(args[1], "svc/lec-multitenant-api")
+    assertEqual(args[2], "--namespace")
+    assertEqual(args[3], "lec-staging")
+    assertEqual(args[4], "3010:80")
 }
 
 test("JSON round-trip") {
-    let original = makeForward(remoteHost: "mydb.rds.amazonaws.com")
+    let original = makeForward()
     let data = try JSONEncoder().encode(original)
     let decoded = try JSONDecoder().decode(PortForward.self, from: data)
     assertEqual(decoded, original)
+}
+
+test("Default values") {
+    let fwd = makeForward()
+    assert(fwd.enabled, "should be enabled by default")
+    assertEqual(fwd.sortOrder, 0)
 }
 
 // MARK: - ConfigStore Tests
@@ -175,13 +139,8 @@ test("Save creates intermediate directories") {
 test("Overwrite preserves integrity") {
     let dir = try makeTempDir()
     let store = ConfigStore(directory: dir)
-    try store.save(AppConfig(forwards: [
-        PortForward(name: "first", awsProfile: "p", region: "r", target: "t", remotePort: 1, localPort: 1)
-    ]))
-    try store.save(AppConfig(forwards: [
-        PortForward(name: "second", awsProfile: "p", region: "r", target: "t", remotePort: 1, localPort: 1),
-        PortForward(name: "third", awsProfile: "p", region: "r", target: "t", remotePort: 2, localPort: 2),
-    ]))
+    try store.save(AppConfig(forwards: [makeForward(name: "first")]))
+    try store.save(AppConfig(forwards: [makeForward(name: "second"), makeForward(name: "third")]))
     let loaded = try store.load()
     assertEqual(loaded.forwards.count, 2)
     assertEqual(loaded.forwards[0].name, "second")
@@ -194,7 +153,8 @@ print("\n=== ProcessRunner Tests ===")
 await testAsync("Detects readiness marker") {
     let runner = ProcessRunner(
         executablePath: "/bin/sh",
-        arguments: ["-c", "echo 'Starting...'; sleep 0.1; echo 'Waiting for connections...'; sleep 10"],
+        arguments: ["-c", "echo 'Starting...'; sleep 0.1; echo 'Forwarding from 127.0.0.1:3010 -> 80'; sleep 10"],
+        readinessMarker: "Forwarding from",
         timeoutSeconds: 5
     )
     try await runner.startAndAwaitReady()
@@ -204,7 +164,8 @@ await testAsync("Detects readiness marker") {
 await testAsync("Fails on early exit") {
     let runner = ProcessRunner(
         executablePath: "/bin/sh",
-        arguments: ["-c", "echo 'error'; exit 1"],
+        arguments: ["-c", "echo 'error: connection refused'; exit 1"],
+        readinessMarker: "Forwarding from",
         timeoutSeconds: 5
     )
     do {
@@ -223,6 +184,7 @@ await testAsync("Fails on timeout") {
     let runner = ProcessRunner(
         executablePath: "/bin/sh",
         arguments: ["-c", "echo 'Starting...'; sleep 30"],
+        readinessMarker: "Forwarding from",
         timeoutSeconds: 1
     )
     do {
@@ -241,7 +203,8 @@ await testAsync("Fails on timeout") {
 await testAsync("Stop terminates running process") {
     let runner = ProcessRunner(
         executablePath: "/bin/sh",
-        arguments: ["-c", "echo 'Waiting for connections...'; sleep 60"],
+        arguments: ["-c", "echo 'Forwarding from 127.0.0.1:3010 -> 80'; sleep 60"],
+        readinessMarker: "Forwarding from",
         timeoutSeconds: 5
     )
     try await runner.startAndAwaitReady()
