@@ -62,11 +62,13 @@ Add new forwards by browsing namespaces and services directly from your cluster 
 
 ## Features
 
-- **Menu bar popover** with status dots (green/yellow/red/gray) and per-forward start/stop controls
-- **Settings window** for managing port forward configurations
+- **Workspace-based configuration** — each workspace folder has its own `.portforwards.json`, add multiple workspaces via folder picker
+- **Menu bar popover** with status dots (green/yellow/red/gray) and per-forward start/stop controls, grouped by workspace
+- **Settings window** for managing workspaces and port forward configurations
 - **Kubectl discovery** — add new forwards by browsing namespaces, services, and ports directly from your cluster
 - **Service port details** — see available ports with type (grpc, http, metrics) and target port info
-- **Connect All** launches all enabled forwards sequentially
+- **Connect All** launches all enabled forwards sequentially across all workspaces
+- **Per-workspace connect/disconnect** — start or stop all forwards in a single workspace
 - **Port conflict detection** prevents starting two forwards on the same local port
 - **Startup detection** checks which ports are already listening and initializes state accordingly
 - **Health monitoring** polls ports every 10 seconds to detect dropped connections and external changes
@@ -99,10 +101,11 @@ The app bundle is created at `build/PortForwarding.app`. Copy it to `/Applicatio
 ## Usage
 
 1. **Launch** the app — a custom icon appears in the menu bar
-2. **Click** the icon to see all configured forwards with their connection status
-3. **Start/stop** individual forwards with the play/stop buttons, or use **Connect All** / **Disconnect All**
-4. **Add forwards** via the gear icon → Settings → Add Forward, which discovers namespaces and services from your cluster
-5. **Monitor** — the app checks port health every 10 seconds and updates status automatically
+2. **Add workspaces** via the gear icon → Settings → Add Workspace, selecting folders that contain (or will contain) `.portforwards.json`
+3. **Click** the menu bar icon to see all configured forwards grouped by workspace with their connection status
+4. **Start/stop** individual forwards with the play/stop buttons, or use **Connect All** / **Disconnect All**
+5. **Add forwards** per workspace via the **+** button on each workspace header, which discovers namespaces and services from your cluster
+6. **Monitor** — the app checks port health every 10 seconds and updates status automatically
 
 ### Status indicators
 
@@ -115,10 +118,20 @@ The app bundle is created at `build/PortForwarding.app`. Copy it to `/Applicatio
 
 ## Configuration
 
-Port forward entries are stored in:
+### App config
+
+Workspace paths are stored in:
 
 ```
 ~/Library/Application Support/PortForwardingApp/config.json
+```
+
+### Per-workspace config
+
+Each workspace folder contains a `.portforwards.json` file with the forward entries for that workspace:
+
+```
+<workspace-folder>/.portforwards.json
 ```
 
 Each entry defines:
@@ -133,17 +146,21 @@ Each entry defines:
 | `enabled` | Included in "Connect All" |
 | `sortOrder` | Launch order for sequential connect |
 
-Example entry:
+Example `.portforwards.json`:
 
 ```json
 {
-  "name": "pf-lmta",
-  "service": "lec-multitenant-api",
-  "namespace": "lec-staging",
-  "localPort": 3010,
-  "remotePort": 80,
-  "enabled": true,
-  "sortOrder": 0
+  "forwards": [
+    {
+      "name": "pf-lmta",
+      "service": "lec-multitenant-api",
+      "namespace": "lec-staging",
+      "localPort": 3010,
+      "remotePort": 80,
+      "enabled": true,
+      "sortOrder": 0
+    }
+  ]
 }
 ```
 

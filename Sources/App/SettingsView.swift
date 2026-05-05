@@ -3,24 +3,26 @@ import PortForwardingLib
 
 struct SettingsView: View {
     @ObservedObject var manager: ForwardManager
-    @State private var showingAddSheet = false
+    @State private var addingToWorkspace: Workspace?
     @State private var editingForward: PortForward?
 
     var body: some View {
         VStack(spacing: 0) {
             toolbar
             Divider()
-            forwardList
+            workspaceList
         }
-        .frame(minWidth: 650, minHeight: 450)
-        .sheet(isPresented: $showingAddSheet) {
+        .frame(minWidth: 700, minHeight: 500)
+        .sheet(item: $addingToWorkspace) { ws in
             ForwardFormView(title: "Add Forward") { forward in
-                manager.addForward(forward)
+                manager.addForward(forward, to: ws)
             }
         }
         .sheet(item: $editingForward) { (forward: PortForward) in
-            ForwardFormView(title: "Edit Forward", forward: forward) { updated in
-                manager.updateForward(updated)
+            if let ws = workspaceForForward(forward) {
+                ForwardFormView(title: "Edit Forward", forward: forward) { updated in
+                    manager.updateForward(updated, in: ws)
+                }
             }
         }
     }
@@ -34,25 +36,95 @@ struct SettingsView: View {
             }
             Button("Disconnect All") { manager.disconnectAll() }
             Spacer()
-            Button("Add Forward") { showingAddSheet = true }
+            Button("Add Workspace") { addWorkspaceFolder() }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
 
-    private var forwardList: some View {
+    private var workspaceList: some View {
         List {
-            ForEach(manager.forwards.sorted(by: { $0.sortOrder < $1.sortOrder })) { forward in
-                ForwardSettingsRow(
-                    forward: forward,
-                    state: manager.states[forward.id] ?? .idle,
-                    onConnect: { Task { await manager.connect(forward) } },
-                    onDisconnect: { manager.disconnect(forward) },
-                    onEdit: { editingForward = forward },
-                    onDelete: { manager.deleteForward(forward) }
-                )
+            ForEach(manager.workspaces) { workspace in
+                Section {
+                    ForEach(workspace.forwards.sorted(by: { $0.sortOrder < $1.sortOrder })) { forward in
+                        ForwardSettingsRow(
+                            forward: forward,
+                            state: manager.states[forward.id] ?? .idle,
+                            onConnect: { Task { await manager.connect(forward) } },
+                            onDisconnect: { manager.disconnect(forward) },
+                            onEdit: { editingForward = forward },
+                            onDelete: { manager.deleteForward(forward, from: workspace) }
+                        )
+                    }
+                } header: {
+                    workspaceHeader(workspace)
+                }
             }
         }
+    }
+
+    private func workspaceHeader(_ workspace: Workspace) -> some View {
+        HStack {
+            Image(systemName: "folder")
+            Text(workspace.name)
+                .font(.headline)
+            Text(workspace.path)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer()
+            Button(action: {
+                addingToWorkspace = workspace
+            }) {
+                Image(systemName: "plus")
+            }
+            .buttonStyle(.borderless)
+            .help("Add forward to this workspace")
+
+            workspaceConnectButton(workspace)
+
+            Button(action: { manager.removeWorkspace(workspace) }) {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.borderless)
+            .help("Remove workspace")
+        }
+    }
+
+    @ViewBuilder
+    private func workspaceConnectButton(_ workspace: Workspace) -> some View {
+        let hasConnected = workspace.forwards.contains { manager.states[$0.id] == .ready }
+        if hasConnected {
+            Button(action: { manager.disconnectWorkspace(workspace) }) {
+                Image(systemName: "stop.fill")
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.borderless)
+            .help("Disconnect workspace")
+        } else {
+            Button(action: { manager.connectWorkspace(workspace) }) {
+                Image(systemName: "play.fill")
+                    .foregroundStyle(.green)
+            }
+            .buttonStyle(.borderless)
+            .help("Connect workspace")
+        }
+    }
+
+    private func addWorkspaceFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Select a workspace folder containing .portforwards.json"
+        if panel.runModal() == .OK, let url = panel.url {
+            manager.addWorkspace(path: url.path)
+        }
+    }
+
+    private func workspaceForForward(_ forward: PortForward) -> Workspace? {
+        manager.workspaces.first { $0.forwards.contains(where: { $0.id == forward.id }) }
     }
 }
 

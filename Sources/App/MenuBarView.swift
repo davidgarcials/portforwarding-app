@@ -5,24 +5,18 @@ struct MenuBarView: View {
     @ObservedObject var manager: ForwardManager
     @Environment(\.openWindow) private var openWindow
 
-    private var sortedForwards: [PortForward] {
-        manager.forwards.sorted { $0.sortOrder < $1.sortOrder }
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerSection
             Divider()
-            ForEach(sortedForwards) { forward in
-                ForwardRowView(
-                    forward: forward,
-                    state: manager.states[forward.id] ?? .idle,
-                    onStart: { Task { await manager.connect(forward) } },
-                    onStop: { manager.disconnect(forward) }
-                )
-                if forward.id != sortedForwards.last?.id {
-                    Divider().padding(.leading, 32)
-                }
+            ForEach(manager.workspaces) { workspace in
+                workspaceSection(workspace)
+            }
+            if manager.workspaces.isEmpty {
+                Text("No workspaces configured")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(12)
             }
             Divider()
             actionButtons
@@ -52,10 +46,35 @@ struct MenuBarView: View {
 
     private var connectedCount: some View {
         let count = manager.states.values.filter { $0 == .ready }.count
-        let total = manager.forwards.count
+        let total = manager.allForwards.count
         return Text("\(count)/\(total)")
             .font(.caption)
             .foregroundStyle(.secondary)
+    }
+
+    private func workspaceSection(_ workspace: Workspace) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(workspace.name)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+                .padding(.bottom, 2)
+
+            let sorted = workspace.forwards.sorted { $0.sortOrder < $1.sortOrder }
+            ForEach(sorted) { forward in
+                ForwardRowView(
+                    forward: forward,
+                    state: manager.states[forward.id] ?? .idle,
+                    onStart: { Task { await manager.connect(forward) } },
+                    onStop: { manager.disconnect(forward) }
+                )
+                if forward.id != sorted.last?.id {
+                    Divider().padding(.leading, 32)
+                }
+            }
+        }
     }
 
     private var actionButtons: some View {

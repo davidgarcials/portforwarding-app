@@ -2,81 +2,82 @@
 
 **Date:** 2025-05-05
 **Status:** Approved
+**Last updated:** 2026-05-05
 
 ## Problem
 
-Managing multiple AWS SSM port forwards manually is tedious: each requires a separate terminal, each triggers a macOS Keychain dialog (via aws-vault), and they must be launched one at a time because the Keychain prompt blocks. The goal is a native macOS app that automates sequential launching and provides at-a-glance status.
+Managing multiple `kubectl port-forward` connections manually is tedious: each requires a separate terminal window, connections drop silently, and there's no single view of what's running. The goal is a native macOS menu bar app that automates sequential launching and provides at-a-glance status.
 
 ## Decisions
 
 ### Tech Stack
 - **Language:** Swift 5.9+
 - **UI:** SwiftUI, targeting macOS 14+
-- **No sandbox** — app spawns child processes (aws-vault, aws cli, session-manager-plugin)
+- **Build:** Swift Package Manager (no Xcode project required)
+- **No sandbox** — app spawns child processes (`kubectl`)
 
 ### UI Surface
-- **Menu bar app** (`MenuBarExtra`) with a popover showing all forwards, status dots, individual start/stop, and "Connect All Enabled" / "Disconnect All" buttons
-- **Settings window** (separate `Window` scene) for CRUD on forward entries
+- **Menu bar app** (`MenuBarExtra`) with a popover showing all forwards grouped by workspace, status dots, individual start/stop, and "Connect All" / "Disconnect All" buttons
+- **Settings window** (separate `Window` scene) for workspace management and per-workspace CRUD on forward entries
+- **Kubectl discovery** — add-forward form browses namespaces, services, and ports from the cluster
 
 ### Data Storage
-- Single JSON file at `~/Library/Application Support/PortForwardingApp/config.json`
-- Atomic writes (write to `.tmp`, then `rename`)
+- **App config** at `~/Library/Application Support/PortForwardingApp/config.json` — stores only workspace folder paths
+- **Per-workspace config** at `<workspace>/.portforwards.json` — stores the forward entries for that workspace
+- Atomic writes (`Data.write(options: .atomic)`)
 - Schema versioned (`version: 1`) for future migration
 
 ### Connection Orchestration
 - **Sequential "Connect All":** iterates enabled forwards in `sortOrder`, `await`s each one before starting the next
-- **Readiness detection:** parse child process stdout for `"Waiting for connections..."` marker
-- **Timeout:** 60 seconds per forward; configurable later if needed
+- **Per-workspace connect/disconnect:** start or stop all forwards in a single workspace
+- **Readiness detection:** parse child process stdout for `"Forwarding from"` marker
+- **Timeout:** 30 seconds per forward
 - **Failure behavior:** log the failure, move to the next forward (don't stall the queue)
-- **Stop:** SIGTERM, then SIGKILL after grace period
+- **Port conflict detection:** prevents starting two forwards on the same local port
+- **Stop:** `Process.terminate()` (SIGTERM)
 
-### Auth Flow
-- `aws-vault exec <profile>` triggers a macOS Keychain unlock dialog (Touch ID / password)
-- The app does NOT interact with the dialog — it simply waits for the child process to proceed past the credential phase
-- This is why launches must be sequential: each triggers a system dialog the user must respond to
+### Startup & Health
+- **Startup detection:** TCP probe on configured local ports to detect already-running forwards
+- **Health monitoring:** polls ports every 10 seconds, updates state if connections drop or appear externally
+- **Process death detection:** `onTerminatedAfterReady` callback updates UI when kubectl exits unexpectedly
 
 ## Data Model
 
 ```swift
-struct PortForward: Codable, Identifiable {
+struct PortForward: Codable, Identifiable, Hashable {
     var id: UUID
-    var name: String           // human label
-    var awsProfile: String     // aws-vault profile name
-    var region: String         // AWS region
-    var target: String         // EC2 instance ID
-    var remoteHost: String?    // nil = direct mode, set = remote-host mode
-    var remotePort: Int
+    var name: String           // human label (e.g. "pf-lmta")
+    var service: String        // Kubernetes service name
+    var namespace: String      // Kubernetes namespace
     var localPort: Int
+    var remotePort: Int
     var enabled: Bool          // included in "Connect All"
     var sortOrder: Int         // sequential launch order
 }
 
 struct AppConfig: Codable {
     var version: Int = 1
+    var workspacePaths: [String]
+}
+
+struct WorkspaceConfig: Codable {
     var forwards: [PortForward]
+}
+
+struct Workspace: Identifiable, Hashable {
+    var id: String { path }
+    let path: String
+    var forwards: [PortForward]
+    var name: String { (path as NSString).lastPathComponent }
 }
 ```
 
 ### Command Construction
 
-**Direct mode** (`remoteHost == nil`):
-```
-aws-vault exec <awsProfile> -- \
-  aws ssm start-session \
-    --target <target> \
-    --document-name AWS-StartPortForwardingSession \
-    --parameters '{"portNumber":["<remotePort>"],"localPortNumber":["<localPort>"]}' \
-    --region <region>
-```
+Forwards are launched via login shell to inherit the user's PATH and kubeconfig:
 
-**Remote-host mode** (`remoteHost != nil`):
 ```
-aws-vault exec <awsProfile> -- \
-  aws ssm start-session \
-    --target <target> \
-    --document-name AWS-StartPortForwardingSessionToRemoteHost \
-    --parameters '{"host":["<remoteHost>"],"portNumber":["<remotePort>"],"localPortNumber":["<localPort>"]}' \
-    --region <region>
+/bin/zsh -l -c "kubectl port-forward svc/<service> --namespace <namespace> <localPort>:<remotePort>"
 ```
 
 ## Architecture
@@ -84,45 +85,49 @@ aws-vault exec <awsProfile> -- \
 ### Three Layers
 
 1. **UI Layer** (SwiftUI)
-   - `MenuBarExtra` with popover: list of forwards, status dots, action buttons
-   - `Window("Settings")`: form-based CRUD for forward entries
+   - `MenuBarExtra` with popover: forwards grouped by workspace, status dots, action buttons
+   - `Window("Settings")`: workspace list with folder picker, per-workspace forward CRUD, connect/disconnect per workspace
+   - Add-forward form with kubectl namespace/service/port discovery
    - Status dot colors: green (ready), yellow (starting), gray (idle), red (failed)
 
 2. **Domain Layer**
    - `ForwardManager: ObservableObject` — source of truth
-     - `@Published forwards: [PortForward]`
+     - `@Published workspaces: [Workspace]`
      - `@Published states: [UUID: ForwardState]`
-     - `connectAll() async` — sequential orchestrator
-     - `connect(_:) async` / `disconnect(_:)` — per-forward control
-   - `ConfigStore` — load/save JSON with atomic write
+     - Workspace management: `addWorkspace(path:)`, `removeWorkspace(_:)`
+     - Forward CRUD: `addForward(_:to:)`, `updateForward(_:in:)`, `deleteForward(_:from:)`
+     - `connectAll()` / `disconnectAll()` — across all workspaces
+     - `connectWorkspace(_:)` / `disconnectWorkspace(_:)` — per workspace
+     - `connect(_:) async` / `disconnect(_:)` — per forward
+   - `ConfigStore` — load/save app config and per-workspace configs
+   - `KubectlDiscovery` — fetches namespaces and services from kubectl
+   - `PortChecker` — TCP probe on localhost ports
 
 3. **Process Layer**
    - `ProcessRunner` — wraps `Foundation.Process`
-     - Pipes stdout/stderr, exposes `AsyncStream<String>` of log lines
+     - Uses `readabilityHandler` on pipes for stdout/stderr parsing
      - `startAndAwaitReady() async throws` — resolves on readiness marker or rejects on exit/timeout
-     - `stop()` — SIGTERM + SIGKILL escalation
-
-### Preflight Check
-On launch, verify `aws-vault`, `aws`, and `session-manager-plugin` are installed (run `--version`). Show setup banner in settings window if any are missing.
+     - `onTerminatedAfterReady` — callback for post-connect process death
+     - `stop()` — terminates process
 
 ### Error Handling
-- Process exits before readiness marker → `.failed` with last 5 stderr lines
-- Keychain dialog cancelled → aws-vault exits non-zero → `.failed`
+- Process exits before readiness marker → `.failed` with exit code and last output
 - Timeout → `.failed("Timed out")`
+- Port conflict → `.failed("Port X already in use by another forward")`
+- Connection lost (health check) → `.failed("Connection lost")`
 - During "Connect All", failures don't block the queue
 
 ## Explicitly Out of Scope (YAGNI)
-- Groups / profiles (flat list with sortOrder is sufficient)
 - Launch at login (trivial to add later via SMAppService)
 - Auto-reconnect on tunnel drop
-- Export/import config (it's a JSON file)
+- Export/import config (it's a JSON file per workspace)
 - Notifications (status dots are sufficient)
 - Dark/light theme toggle (SwiftUI respects system appearance)
 
-## Pending
-- **Seed data:** Boss to provide the current list of port forwards to populate initial config.json
-
 ## Implementation Notes
-- No App Store distribution — direct .app or Homebrew cask
-- TDD: ProcessRunner testable with mock executables (`/bin/sh -c 'echo "Waiting for connections..."'`)
-- ForwardManager testable with injected ProcessRunner protocol
+- No App Store distribution — direct .app download from GitHub Releases
+- Unsigned app requires `xattr -cr PortForwarding.app` after download
+- LSUIElement=true — menu bar only, no Dock icon
+- TDD: ProcessRunner testable with `/bin/sh` mock scripts
+- ForwardManager testable with injected `ProcessRunnerFactory` protocol
+- Custom TestRunner executable (XCTest unavailable without full Xcode)

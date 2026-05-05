@@ -13,7 +13,7 @@ public struct DefaultProcessRunnerFactory: ProcessRunnerFactory {
 
 @MainActor
 public final class ForwardManager: ObservableObject {
-    @Published public var forwards: [PortForward] = []
+    @Published public var workspaces: [Workspace] = []
     @Published public var states: [UUID: ForwardState] = [:]
     @Published public var isConnectingAll = false
 
@@ -24,6 +24,10 @@ public final class ForwardManager: ObservableObject {
     private var healthCheckTask: Task<Void, Never>?
     private let healthCheckInterval: TimeInterval
 
+    public var allForwards: [PortForward] {
+        workspaces.flatMap(\.forwards)
+    }
+
     public init(
         configStore: ConfigStore,
         runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory(),
@@ -32,63 +36,44 @@ public final class ForwardManager: ObservableObject {
         self.configStore = configStore
         self.runnerFactory = runnerFactory
         self.healthCheckInterval = healthCheckInterval
-        self.forwards = configStore.loadOrDefault().forwards
-        for fwd in forwards {
+        self.workspaces = configStore.loadAllWorkspaces()
+        for fwd in allForwards {
             states[fwd.id] = .idle
         }
         checkInitialPortStates()
         startHealthCheck()
     }
 
-    private func checkInitialPortStates() {
-        var seenPorts = Set<Int>()
-        for fwd in forwards.sorted(by: { $0.sortOrder < $1.sortOrder }) {
-            if seenPorts.contains(fwd.localPort) { continue }
-            if PortChecker.isPortOpen(fwd.localPort) {
-                states[fwd.id] = .ready
-            }
-            seenPorts.insert(fwd.localPort)
+    // MARK: - Workspace management
+
+    public func addWorkspace(path: String) {
+        guard !workspaces.contains(where: { $0.path == path }) else { return }
+        let ws = Workspace(path: path, forwards: configStore.loadWorkspaceConfigOrDefault(at: path).forwards)
+        workspaces.append(ws)
+        for fwd in ws.forwards {
+            states[fwd.id] = .idle
         }
+        checkInitialPortStates()
+        saveAppConfig()
     }
 
-    private func startHealthCheck() {
-        healthCheckTask = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(healthCheckInterval * 1_000_000_000))
-                guard !Task.isCancelled else { break }
-                runHealthCheck()
-            }
+    public func removeWorkspace(_ workspace: Workspace) {
+        for fwd in workspace.forwards {
+            disconnect(fwd)
+            states.removeValue(forKey: fwd.id)
         }
+        workspaces.removeAll { $0.path == workspace.path }
+        saveAppConfig()
     }
 
-    private func runHealthCheck() {
-        for fwd in forwards {
-            let current = states[fwd.id] ?? .idle
-            let portOpen = PortChecker.isPortOpen(fwd.localPort)
-
-            switch current {
-            case .ready:
-                if !portOpen {
-                    runners[fwd.id]?.stop()
-                    runners[fwd.id] = nil
-                    states[fwd.id] = .failed("Connection lost")
-                }
-            case .idle, .stopped, .failed:
-                if portOpen && runners[fwd.id] == nil {
-                    states[fwd.id] = .ready
-                }
-            case .starting:
-                break
-            }
-        }
-    }
+    // MARK: - Connect / Disconnect
 
     public func connectAll() {
         guard !isConnectingAll else { return }
         isConnectingAll = true
 
         connectAllTask = Task {
-            let enabled = forwards
+            let enabled = allForwards
                 .filter(\.enabled)
                 .sorted { $0.sortOrder < $1.sortOrder }
 
@@ -102,6 +87,29 @@ public final class ForwardManager: ObservableObject {
                 await connect(fwd)
             }
             isConnectingAll = false
+        }
+    }
+
+    public func connectWorkspace(_ workspace: Workspace) {
+        Task {
+            let enabled = workspace.forwards
+                .filter(\.enabled)
+                .sorted { $0.sortOrder < $1.sortOrder }
+
+            for fwd in enabled {
+                if states[fwd.id] == .ready { continue }
+                if hasPortConflict(fwd) {
+                    states[fwd.id] = .failed("Port \(fwd.localPort) already in use by another forward")
+                    continue
+                }
+                await connect(fwd)
+            }
+        }
+    }
+
+    public func disconnectWorkspace(_ workspace: Workspace) {
+        for fwd in workspace.forwards {
+            disconnect(fwd)
         }
     }
 
@@ -144,37 +152,95 @@ public final class ForwardManager: ObservableObject {
 
     public func disconnectAll() {
         cancelConnectAll()
-        for fwd in forwards {
+        for fwd in allForwards {
             disconnect(fwd)
         }
     }
 
-    public func addForward(_ forward: PortForward) {
-        forwards.append(forward)
+    // MARK: - CRUD on forwards within a workspace
+
+    public func addForward(_ forward: PortForward, to workspace: Workspace) {
+        guard let idx = workspaces.firstIndex(where: { $0.path == workspace.path }) else { return }
+        workspaces[idx].forwards.append(forward)
         states[forward.id] = .idle
-        saveConfig()
+        saveWorkspaceConfig(workspaces[idx])
     }
 
-    public func updateForward(_ forward: PortForward) {
-        guard let index = forwards.firstIndex(where: { $0.id == forward.id }) else { return }
-        forwards[index] = forward
-        saveConfig()
+    public func updateForward(_ forward: PortForward, in workspace: Workspace) {
+        guard let wsIdx = workspaces.firstIndex(where: { $0.path == workspace.path }),
+              let fwdIdx = workspaces[wsIdx].forwards.firstIndex(where: { $0.id == forward.id })
+        else { return }
+        workspaces[wsIdx].forwards[fwdIdx] = forward
+        saveWorkspaceConfig(workspaces[wsIdx])
     }
 
-    public func deleteForward(_ forward: PortForward) {
+    public func deleteForward(_ forward: PortForward, from workspace: Workspace) {
+        guard let wsIdx = workspaces.firstIndex(where: { $0.path == workspace.path }) else { return }
         disconnect(forward)
-        forwards.removeAll { $0.id == forward.id }
+        workspaces[wsIdx].forwards.removeAll { $0.id == forward.id }
         states.removeValue(forKey: forward.id)
-        saveConfig()
+        saveWorkspaceConfig(workspaces[wsIdx])
     }
 
-    public func saveConfig() {
-        let config = AppConfig(forwards: forwards)
-        try? configStore.save(config)
+    // MARK: - Persistence
+
+    private func saveAppConfig() {
+        let config = AppConfig(workspacePaths: workspaces.map(\.path))
+        try? configStore.saveAppConfig(config)
+    }
+
+    private func saveWorkspaceConfig(_ workspace: Workspace) {
+        let config = WorkspaceConfig(forwards: workspace.forwards)
+        try? configStore.saveWorkspaceConfig(config, at: workspace.path)
+    }
+
+    // MARK: - Health checks
+
+    private func checkInitialPortStates() {
+        var seenPorts = Set<Int>()
+        for fwd in allForwards.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+            if seenPorts.contains(fwd.localPort) { continue }
+            if PortChecker.isPortOpen(fwd.localPort) {
+                states[fwd.id] = .ready
+            }
+            seenPorts.insert(fwd.localPort)
+        }
+    }
+
+    private func startHealthCheck() {
+        healthCheckTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(healthCheckInterval * 1_000_000_000))
+                guard !Task.isCancelled else { break }
+                runHealthCheck()
+            }
+        }
+    }
+
+    private func runHealthCheck() {
+        for fwd in allForwards {
+            let current = states[fwd.id] ?? .idle
+            let portOpen = PortChecker.isPortOpen(fwd.localPort)
+
+            switch current {
+            case .ready:
+                if !portOpen {
+                    runners[fwd.id]?.stop()
+                    runners[fwd.id] = nil
+                    states[fwd.id] = .failed("Connection lost")
+                }
+            case .idle, .stopped, .failed:
+                if portOpen && runners[fwd.id] == nil {
+                    states[fwd.id] = .ready
+                }
+            case .starting:
+                break
+            }
+        }
     }
 
     private func hasPortConflict(_ forward: PortForward) -> Bool {
-        for fwd in forwards where fwd.id != forward.id && fwd.localPort == forward.localPort {
+        for fwd in allForwards where fwd.id != forward.id && fwd.localPort == forward.localPort {
             if states[fwd.id] == .ready || states[fwd.id] == .starting {
                 return true
             }

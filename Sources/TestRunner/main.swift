@@ -108,43 +108,43 @@ func makeTempDir() throws -> URL {
     return url
 }
 
-test("Save and load round-trip") {
+test("AppConfig save and load round-trip") {
     let dir = try makeTempDir()
     let store = ConfigStore(directory: dir)
-    let config = AppConfig(forwards: [makeForward()])
-    try store.save(config)
-    let loaded = try store.load()
+    let config = AppConfig(workspacePaths: ["/tmp/ws1", "/tmp/ws2"])
+    try store.saveAppConfig(config)
+    let loaded = try store.loadAppConfig()
     assertEqual(loaded.version, 1)
+    assertEqual(loaded.workspacePaths.count, 2)
+    assertEqual(loaded.workspacePaths[0], "/tmp/ws1")
+}
+
+test("loadAppConfigOrDefault returns empty when no file") {
+    let dir = try makeTempDir()
+    let store = ConfigStore(directory: dir)
+    let config = store.loadAppConfigOrDefault()
+    assert(config.workspacePaths.isEmpty, "should be empty")
+    assertEqual(config.version, 1)
+}
+
+test("WorkspaceConfig save and load round-trip") {
+    let wsDir = try makeTempDir()
+    let store = ConfigStore(directory: try makeTempDir())
+    let config = WorkspaceConfig(forwards: [makeForward()])
+    try store.saveWorkspaceConfig(config, at: wsDir.path)
+    let loaded = try store.loadWorkspaceConfig(at: wsDir.path)
     assertEqual(loaded.forwards.count, 1)
     assertEqual(loaded.forwards[0].name, "test")
 }
 
-test("loadOrDefault returns empty when no file") {
-    let dir = try makeTempDir()
-    let store = ConfigStore(directory: dir)
-    let config = store.loadOrDefault()
-    assert(config.forwards.isEmpty, "should be empty")
-    assertEqual(config.version, 1)
-}
-
-test("Save creates intermediate directories") {
+test("AppConfig save creates intermediate directories") {
     let dir = FileManager.default.temporaryDirectory
         .appendingPathComponent("PortFwdTests-\(UUID().uuidString)")
         .appendingPathComponent("nested")
     let store = ConfigStore(directory: dir)
-    try store.save(AppConfig(forwards: [makeForward()]))
-    let loaded = try store.load()
-    assertEqual(loaded.forwards.count, 1)
-}
-
-test("Overwrite preserves integrity") {
-    let dir = try makeTempDir()
-    let store = ConfigStore(directory: dir)
-    try store.save(AppConfig(forwards: [makeForward(name: "first")]))
-    try store.save(AppConfig(forwards: [makeForward(name: "second"), makeForward(name: "third")]))
-    let loaded = try store.load()
-    assertEqual(loaded.forwards.count, 2)
-    assertEqual(loaded.forwards[0].name, "second")
+    try store.saveAppConfig(AppConfig(workspacePaths: ["/tmp/ws"]))
+    let loaded = try store.loadAppConfig()
+    assertEqual(loaded.workspacePaths.count, 1)
 }
 
 // MARK: - PortChecker Tests
