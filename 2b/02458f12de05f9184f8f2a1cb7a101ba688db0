@@ -1,0 +1,51 @@
+Tests/DomainTests/PortForwardTests.swift
+  b7ea9b1da33640ad 1-86
+Sources/App/MenuBarView.swift
+  b7ea9b1da33640ad 1-138
+Tests/ProcessTests/ProcessRunnerTests.swift
+  b7ea9b1da33640ad 1-77
+Tests/DomainTests/ConfigStoreTests.swift
+  b7ea9b1da33640ad 1-73
+Sources/Domain/PortForward.swift
+  b7ea9b1da33640ad 1-84
+Resources/Info.plist
+  b7ea9b1da33640ad 1-24
+Package.swift
+  b7ea9b1da33640ad 1-39
+Sources/App/SettingsView.swift
+  b7ea9b1da33640ad 1-152
+.gitignore
+  b7ea9b1da33640ad 1-5
+Sources/App/PortForwardingApp.swift
+  b7ea9b1da33640ad 1-18
+Sources/TestRunner/main.swift
+  b7ea9b1da33640ad 1-259
+Makefile
+  b7ea9b1da33640ad 1-26
+Sources/Domain/ForwardManager.swift
+  b7ea9b1da33640ad 1-106
+Sources/Process/ProcessRunner.swift
+  b7ea9b1da33640ad 1-184
+Sources/Domain/ConfigStore.swift
+  b7ea9b1da33640ad 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "2b02458f12de05f9184f8f2a1cb7a101ba688db0",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 4492,
+      "total_deletions": 619,
+      "accepted_lines": 4062,
+      "overriden_lines": 93
+    }
+  }
+}
