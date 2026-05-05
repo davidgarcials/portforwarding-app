@@ -1,0 +1,35 @@
+Sources/Domain/PortForward.swift
+  b7ea9b1da33640ad 6-7,9,16-17,19,25-26,28,34-38
+Sources/App/SettingsView.swift
+  b7ea9b1da33640ad 59,81-82,101-102,115,122-123,134-135,137
+.claude/hud-budget.json
+  b7ea9b1da33640ad 1-12
+Resources/Info.plist
+  b7ea9b1da33640ad 18
+Sources/Domain/ForwardManager.swift
+  b7ea9b1da33640ad 46-49,62-66,115-122
+Sources/TestRunner/main.swift
+  b7ea9b1da33640ad 59-63,66-70,76-77,79-83,87,93-98,142-143,156-157,167-168,187,206-207
+Sources/Process/ProcessRunner.swift
+  b7ea9b1da33640ad 23,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "515b106aa4395dd1e76f1d917bcadeaa12832eef",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 84,
+      "total_deletions": 146,
+      "accepted_lines": 2679,
+      "overriden_lines": 0
+    }
+  }
+}
