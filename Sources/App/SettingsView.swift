@@ -180,30 +180,156 @@ struct ForwardFormView: View {
     let onSave: (PortForward) -> Void
 
     @Environment(\.dismiss) private var dismiss
+
+    @State private var namespaces: [String] = []
+    @State private var services: [KubeService] = []
+    @State private var selectedNamespace: String = ""
+    @State private var selectedService: String = ""
+    @State private var selectedPort: Int = 0
+
     @State private var name: String = ""
-    @State private var service: String = ""
-    @State private var namespace: String = ""
-    @State private var remotePort: String = ""
     @State private var localPort: String = ""
     @State private var enabled: Bool = true
     @State private var sortOrder: String = "0"
 
+    @State private var isLoadingNamespaces = false
+    @State private var isLoadingServices = false
+    @State private var errorMessage: String?
+
+    private var isEditing: Bool { forward != nil }
+
     var body: some View {
-        VStack {
-            formFields
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title).font(.title2).fontWeight(.semibold)
+
+            if let errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            formContent
             formButtons
         }
-        .padding()
-        .frame(width: 400)
-        .onAppear { populateFromForward() }
+        .padding(20)
+        .frame(width: 480)
+        .onAppear {
+            if isEditing {
+                populateFromForward()
+            } else {
+                loadNamespaces()
+            }
+        }
     }
 
-    private var formFields: some View {
+    @ViewBuilder
+    private var formContent: some View {
         Form {
+            if isEditing {
+                editFields
+            } else {
+                discoveryFields
+            }
+            sharedFields
+        }
+    }
+
+    private var editFields: some View {
+        Group {
+            TextField("Namespace", text: $selectedNamespace)
+            TextField("Service", text: $selectedService)
+            TextField("Remote Port", text: .init(
+                get: { String(selectedPort) },
+                set: { selectedPort = Int($0) ?? 0 }
+            ))
+        }
+    }
+
+    private var discoveryFields: some View {
+        Group {
+            namespacePicker
+            if !selectedNamespace.isEmpty {
+                servicePicker
+            }
+            if !selectedService.isEmpty && !services.isEmpty {
+                portPicker
+            }
+        }
+    }
+
+    private var namespacePicker: some View {
+        HStack {
+            Picker("Namespace", selection: $selectedNamespace) {
+                Text("Select...").tag("")
+                ForEach(namespaces, id: \.self) { ns in
+                    Text(ns).tag(ns)
+                }
+            }
+            if isLoadingNamespaces {
+                ProgressView().controlSize(.small)
+            }
+            Button(action: loadNamespaces) {
+                Image(systemName: "arrow.clockwise")
+            }
+            .buttonStyle(.borderless)
+            .help("Refresh namespaces")
+        }
+        .onChange(of: selectedNamespace) {
+            selectedService = ""
+            selectedPort = 0
+            services = []
+            if !selectedNamespace.isEmpty {
+                loadServices()
+            }
+        }
+    }
+
+    private var servicePicker: some View {
+        HStack {
+            Picker("Service", selection: $selectedService) {
+                Text("Select...").tag("")
+                ForEach(services, id: \.name) { svc in
+                    Text(svc.name).tag(svc.name)
+                }
+            }
+            if isLoadingServices {
+                ProgressView().controlSize(.small)
+            }
+        }
+        .onChange(of: selectedService) {
+            if let svc = services.first(where: { $0.name == selectedService }),
+               let firstPort = svc.ports.first {
+                selectedPort = firstPort.port
+                localPort = String(firstPort.port)
+                if name.isEmpty {
+                    name = "pf-\(selectedService)"
+                }
+            }
+        }
+    }
+
+    private var portPicker: some View {
+        Group {
+            if let svc = services.first(where: { $0.name == selectedService }), svc.ports.count > 1 {
+                Picker("Remote Port", selection: $selectedPort) {
+                    ForEach(svc.ports, id: \.port) { p in
+                        Text("\(p.port) (\(p.name ?? p.protocol_))").tag(p.port)
+                    }
+                }
+                .onChange(of: selectedPort) {
+                    localPort = String(selectedPort)
+                }
+            } else {
+                LabeledContent("Remote Port") {
+                    Text("\(selectedPort)")
+                }
+            }
+        }
+    }
+
+    private var sharedFields: some View {
+        Group {
             TextField("Name", text: $name)
-            TextField("Service (e.g. lec-multitenant-api)", text: $service)
-            TextField("Namespace", text: $namespace)
-            TextField("Remote Port", text: $remotePort)
             TextField("Local Port", text: $localPort)
             TextField("Sort Order", text: $sortOrder)
             Toggle("Enabled", isOn: $enabled)
@@ -215,16 +341,45 @@ struct ForwardFormView: View {
             Button("Cancel") { dismiss() }
             Spacer()
             Button("Save") { saveForward() }
-                .disabled(name.isEmpty || service.isEmpty || namespace.isEmpty || remotePort.isEmpty || localPort.isEmpty)
+                .disabled(name.isEmpty || selectedService.isEmpty || selectedNamespace.isEmpty || localPort.isEmpty || selectedPort == 0)
+                .keyboardShortcut(.defaultAction)
+        }
+    }
+
+    private func loadNamespaces() {
+        isLoadingNamespaces = true
+        errorMessage = nil
+        Task {
+            do {
+                let ns = try await KubectlDiscovery.fetchNamespaces()
+                namespaces = ns
+            } catch {
+                errorMessage = "Failed to load namespaces: \(error.localizedDescription)"
+            }
+            isLoadingNamespaces = false
+        }
+    }
+
+    private func loadServices() {
+        isLoadingServices = true
+        errorMessage = nil
+        Task {
+            do {
+                let svcs = try await KubectlDiscovery.fetchServices(namespace: selectedNamespace)
+                services = svcs
+            } catch {
+                errorMessage = "Failed to load services: \(error.localizedDescription)"
+            }
+            isLoadingServices = false
         }
     }
 
     private func populateFromForward() {
         guard let fwd = forward else { return }
         name = fwd.name
-        service = fwd.service
-        namespace = fwd.namespace
-        remotePort = String(fwd.remotePort)
+        selectedNamespace = fwd.namespace
+        selectedService = fwd.service
+        selectedPort = fwd.remotePort
         localPort = String(fwd.localPort)
         enabled = fwd.enabled
         sortOrder = String(fwd.sortOrder)
@@ -234,10 +389,10 @@ struct ForwardFormView: View {
         let fwd = PortForward(
             id: forward?.id ?? UUID(),
             name: name,
-            service: service,
-            namespace: namespace,
+            service: selectedService,
+            namespace: selectedNamespace,
             localPort: Int(localPort) ?? 0,
-            remotePort: Int(remotePort) ?? 0,
+            remotePort: selectedPort,
             enabled: enabled,
             sortOrder: Int(sortOrder) ?? 0
         )
