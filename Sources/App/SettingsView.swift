@@ -310,21 +310,49 @@ struct ForwardFormView: View {
 
     private var portPicker: some View {
         Group {
-            if let svc = services.first(where: { $0.name == selectedService }), svc.ports.count > 1 {
-                Picker("Remote Port", selection: $selectedPort) {
+            if let svc = services.first(where: { $0.name == selectedService }) {
+                Section("Ports") {
                     ForEach(svc.ports, id: \.port) { p in
-                        Text("\(p.port) (\(p.name ?? p.protocol_))").tag(p.port)
+                        HStack {
+                            Image(systemName: selectedPort == p.port ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(selectedPort == p.port ? .blue : .secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Port \(p.port)")
+                                    .fontWeight(selectedPort == p.port ? .semibold : .regular)
+                                HStack(spacing: 8) {
+                                    if let name = p.name, !name.isEmpty {
+                                        Label(name, systemImage: portTypeIcon(name))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Text(p.protocol_)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text("→ \(p.targetPort)")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedPort = p.port
+                            localPort = String(p.port)
+                        }
                     }
-                }
-                .onChange(of: selectedPort) {
-                    localPort = String(selectedPort)
-                }
-            } else {
-                LabeledContent("Remote Port") {
-                    Text("\(selectedPort)")
                 }
             }
         }
+    }
+
+    private func portTypeIcon(_ name: String) -> String {
+        let lower = name.lowercased()
+        if lower.contains("grpc") { return "arrow.left.arrow.right" }
+        if lower.contains("http") { return "globe" }
+        if lower.contains("web") { return "globe" }
+        if lower.contains("metrics") { return "chart.bar" }
+        return "network"
     }
 
     private var sharedFields: some View {
