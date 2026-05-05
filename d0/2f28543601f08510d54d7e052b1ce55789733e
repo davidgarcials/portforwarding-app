@@ -1,0 +1,27 @@
+README.md
+  b7ea9b1da33640ad 141,155-157
+SPEC.md
+  b7ea9b1da33640ad 49
+Sources/TestRunner/main.swift
+  b7ea9b1da33640ad 77,82-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "d02f28543601f08510d54d7e052b1ce55789733e",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 136,
+      "total_deletions": 1691,
+      "accepted_lines": 1969,
+      "overriden_lines": 0
+    }
+  }
+}
