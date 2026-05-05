@@ -16,6 +16,9 @@ bundle: build
 	mkdir -p $(MACOS_DIR) $(RESOURCES_DIR)
 	cp .build/release/PortForwardingApp $(MACOS_DIR)/$(APP_NAME)
 	cp Resources/Info.plist $(CONTENTS_DIR)/Info.plist
+	cp Resources/AppIcon.icns $(RESOURCES_DIR)/AppIcon.icns
+	cp Resources/menubar-icon.png $(RESOURCES_DIR)/menubar-icon.png
+	cp Resources/menubar-icon@2x.png $(RESOURCES_DIR)/menubar-icon@2x.png
 	@echo "Built $(BUNDLE_DIR)"
 
 run: bundle
