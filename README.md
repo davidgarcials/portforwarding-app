@@ -19,7 +19,12 @@
   <img src="https://img.shields.io/github/v/release/davidgarcials/portforwarding-app?style=for-the-badge" alt="Latest Release"/>
 </p>
 
-> **Quick install:** Download the zip, extract, and move `PortForwarding.app` to `/Applications`. The app appears in your menu bar.
+> **Quick install:** Download the zip, extract, and run the following commands:
+> ```bash
+> xattr -cr PortForwarding.app
+> mv PortForwarding.app /Applications/
+> ```
+> The app is unsigned, so macOS requires removing the quarantine attribute before launching. It will appear in your menu bar.
 
 ---
 
