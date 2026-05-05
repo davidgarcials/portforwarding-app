@@ -21,15 +21,23 @@ public final class ForwardManager: ObservableObject {
     private let configStore: ConfigStore
     private let runnerFactory: ProcessRunnerFactory
     private var connectAllTask: Task<Void, Never>?
+    private var healthCheckTask: Task<Void, Never>?
+    private let healthCheckInterval: TimeInterval
 
-    public init(configStore: ConfigStore, runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory()) {
+    public init(
+        configStore: ConfigStore,
+        runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory(),
+        healthCheckInterval: TimeInterval = 10
+    ) {
         self.configStore = configStore
         self.runnerFactory = runnerFactory
+        self.healthCheckInterval = healthCheckInterval
         self.forwards = configStore.loadOrDefault().forwards
         for fwd in forwards {
             states[fwd.id] = .idle
         }
         checkInitialPortStates()
+        startHealthCheck()
     }
 
     private func checkInitialPortStates() {
@@ -40,6 +48,38 @@ public final class ForwardManager: ObservableObject {
                 states[fwd.id] = .ready
             }
             seenPorts.insert(fwd.localPort)
+        }
+    }
+
+    private func startHealthCheck() {
+        healthCheckTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(healthCheckInterval * 1_000_000_000))
+                guard !Task.isCancelled else { break }
+                runHealthCheck()
+            }
+        }
+    }
+
+    private func runHealthCheck() {
+        for fwd in forwards {
+            let current = states[fwd.id] ?? .idle
+            let portOpen = PortChecker.isPortOpen(fwd.localPort)
+
+            switch current {
+            case .ready:
+                if !portOpen {
+                    runners[fwd.id]?.stop()
+                    runners[fwd.id] = nil
+                    states[fwd.id] = .failed("Connection lost")
+                }
+            case .idle, .stopped, .failed:
+                if portOpen && runners[fwd.id] == nil {
+                    states[fwd.id] = .ready
+                }
+            case .starting:
+                break
+            }
         }
     }
 
