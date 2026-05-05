@@ -1,0 +1,23 @@
+README.md
+  b7ea9b1da33640ad 14-45,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "d2e49b6bd6314c58ab57fd06a4cb12535ab5fe9c",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 1770,
+      "total_deletions": 1,
+      "accepted_lines": 5040,
+      "overriden_lines": 0
+    }
+  }
+}
