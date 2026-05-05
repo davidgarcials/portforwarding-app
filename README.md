@@ -9,6 +9,18 @@
   Start, stop, and monitor multiple port forwards from a single interface instead of juggling terminal windows.
 </p>
 
+<p align="center">
+  <a href="https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.app.zip">
+    <img src="https://img.shields.io/badge/Download-PortForwarding.app-blue?style=for-the-badge&logo=apple" alt="Download"/>
+  </a>
+  &nbsp;
+  <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=for-the-badge&logo=apple" alt="macOS 14+"/>
+  &nbsp;
+  <img src="https://img.shields.io/github/v/release/davidgarcials/portforwarding-app?style=for-the-badge" alt="Latest Release"/>
+</p>
+
+> **Quick install:** Download the zip, extract, and move `PortForwarding.app` to `/Applications`. The app appears in your menu bar.
+
 ---
 
 ## Screenshots
