@@ -1,0 +1,31 @@
+Resources/menubar-icon.svg
+  b7ea9b1da33640ad 1-11
+Resources/Info.plist
+  b7ea9b1da33640ad 19-20
+Sources/App/PortForwardingApp.swift
+  b7ea9b1da33640ad 2,10,12-13,22-44
+Resources/appicon.svg
+  b7ea9b1da33640ad 1-34
+Makefile
+  b7ea9b1da33640ad 19-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "aff07a0f73599d3ca23bd663dab0cc9d39d9a04d",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 2525,
+      "total_deletions": 72,
+      "accepted_lines": 5705,
+      "overriden_lines": 0
+    }
+  }
+}
