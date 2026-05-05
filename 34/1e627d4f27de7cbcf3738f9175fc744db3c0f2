@@ -1,0 +1,35 @@
+Sources/Domain/PortForward.swift
+  b7ea9b1da33640ad 35-36
+Sources/App/MenuBarView.swift
+  b7ea9b1da33640ad 18,26,36-43,46,54,98,100-121,127,152,161
+Sources/Domain/PortChecker.swift
+  b7ea9b1da33640ad 1-25
+Sources/App/SettingsView.swift
+  b7ea9b1da33640ad 10-12,15,28-33,35-37,39-40,43-53,61-63,68-97,99-107,109-143,145-153,155-170,172-173
+Sources/TestRunner/main.swift
+  b7ea9b1da33640ad 79-84,150-158
+Sources/Domain/ForwardManager.swift
+  b7ea9b1da33640ad 32-43,83-90
+Sources/Process/ProcessRunner.swift
+  b7ea9b1da33640ad 6,22-24,27,58,129,132,143,146-154,172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "341e627d4f27de7cbcf3738f9175fc744db3c0f2",
+  "prompts": {
+    "b7ea9b1da33640ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "850702df-1900-45e8-96e8-b55d10ab7776",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "david.garcia",
+      "messages": [],
+      "total_additions": 260,
+      "total_deletions": 65,
+      "accepted_lines": 2814,
+      "overriden_lines": 23
+    }
+  }
+}
