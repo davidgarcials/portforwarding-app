@@ -76,11 +76,12 @@ print("\n=== PortForward Model Tests ===")
 test("Launch arguments") {
     let fwd = makeForward(service: "lec-multitenant-api", namespace: "lec-staging", localPort: 3010, remotePort: 80)
     let args = fwd.launchArguments
-    assertEqual(args[0], "port-forward")
-    assertEqual(args[1], "svc/lec-multitenant-api")
-    assertEqual(args[2], "--namespace")
-    assertEqual(args[3], "lec-staging")
-    assertEqual(args[4], "3010:80")
+    assertEqual(args[0], "-l")
+    assertEqual(args[1], "-c")
+    assert(args[2].contains("kubectl port-forward"), "should contain kubectl command")
+    assert(args[2].contains("svc/lec-multitenant-api"), "should contain service")
+    assert(args[2].contains("--namespace lec-staging"), "should contain namespace")
+    assert(args[2].contains("3010:80"), "should contain port mapping")
 }
 
 test("JSON round-trip") {
@@ -144,6 +145,15 @@ test("Overwrite preserves integrity") {
     let loaded = try store.load()
     assertEqual(loaded.forwards.count, 2)
     assertEqual(loaded.forwards[0].name, "second")
+}
+
+// MARK: - PortChecker Tests
+
+print("\n=== PortChecker Tests ===")
+
+test("Closed port returns false") {
+    let result = PortChecker.isPortOpen(59999)
+    assert(!result, "port 59999 should not be open")
 }
 
 // MARK: - ProcessRunner Tests

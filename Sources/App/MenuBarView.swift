@@ -15,7 +15,7 @@ struct MenuBarView: View {
             Divider()
             bottomSection
         }
-        .frame(width: 320)
+        .frame(width: 360)
     }
 
     private var headerSection: some View {
@@ -23,6 +23,7 @@ struct MenuBarView: View {
             Text("Port Forwards")
                 .font(.headline)
             Spacer()
+            connectedCount
             Button(action: { openWindow(id: "settings") }) {
                 Image(systemName: "gear")
             }
@@ -32,9 +33,17 @@ struct MenuBarView: View {
         .padding(.vertical, 8)
     }
 
+    private var connectedCount: some View {
+        let count = manager.states.values.filter { $0 == .ready }.count
+        let total = manager.forwards.count
+        return Text("\(count)/\(total)")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
     private var forwardsList: some View {
         ScrollView {
-            LazyVStack(spacing: 2) {
+            LazyVStack(spacing: 0) {
                 ForEach(manager.forwards.sorted(by: { $0.sortOrder < $1.sortOrder })) { forward in
                     ForwardRowView(
                         forward: forward,
@@ -42,6 +51,7 @@ struct MenuBarView: View {
                         onStart: { Task { await manager.connect(forward) } },
                         onStop: { manager.disconnect(forward) }
                     )
+                    Divider().padding(.leading, 32)
                 }
             }
         }
@@ -85,20 +95,36 @@ struct ForwardRowView: View {
     let onStop: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             statusDot
-            VStack(alignment: .leading, spacing: 2) {
-                Text(forward.name)
-                    .font(.system(.body, design: .monospaced))
-                Text(":\(forward.localPort)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 4) {
+                    Text(forward.name)
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(.medium)
+                    if !forward.enabled {
+                        Text("off")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                HStack(spacing: 4) {
+                    Text(":\(forward.localPort)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if case .failed(let reason) = state {
+                        Text("— \(reason)")
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                            .lineLimit(1)
+                    }
+                }
             }
             Spacer()
             actionButton
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 
     @ViewBuilder
@@ -123,6 +149,7 @@ struct ForwardRowView: View {
         case .idle, .stopped, .failed:
             Button(action: onStart) {
                 Image(systemName: "play.fill")
+                    .foregroundStyle(.green)
             }
             .buttonStyle(.borderless)
         case .starting:
@@ -131,6 +158,7 @@ struct ForwardRowView: View {
         case .ready:
             Button(action: onStop) {
                 Image(systemName: "stop.fill")
+                    .foregroundStyle(.red)
             }
             .buttonStyle(.borderless)
         }

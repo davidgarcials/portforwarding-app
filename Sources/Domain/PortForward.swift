@@ -32,10 +32,8 @@ public struct PortForward: Codable, Identifiable, Hashable {
 
     public var launchArguments: [String] {
         [
-            "port-forward",
-            "svc/\(service)",
-            "--namespace", namespace,
-            "\(localPort):\(remotePort)",
+            "-l", "-c",
+            "kubectl port-forward svc/\(service) --namespace \(namespace) \(localPort):\(remotePort)",
         ]
     }
 }

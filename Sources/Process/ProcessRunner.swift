@@ -3,6 +3,7 @@ import Foundation
 public protocol ProcessRunning: AnyObject {
     func startAndAwaitReady() async throws
     func stop()
+    var onTerminatedAfterReady: ((Int32, String) -> Void)? { get set }
 }
 
 public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
@@ -18,9 +19,12 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
 
     private var readyContinuation: CheckedContinuation<Void, Error>?
     private var continuationResolved = false
+    private var isReady = false
+
+    public var onTerminatedAfterReady: ((Int32, String) -> Void)?
 
     public init(
-        executablePath: String = "/usr/local/bin/kubectl",
+        executablePath: String = "/bin/zsh",
         arguments: [String],
         readinessMarker: String = "Forwarding from",
         timeoutSeconds: Double = 60
@@ -51,6 +55,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         lock.lock()
         self.process = proc
         self.continuationResolved = false
+        self.isReady = false
         lock.unlock()
 
         proc.terminationHandler = { [weak self] terminatedProc in
@@ -121,10 +126,10 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         if lastLines.count > maxLastLines {
             lastLines.removeFirst()
         }
-        let isReady = line.contains(readinessMarker)
+        let matched = line.contains(readinessMarker)
         lock.unlock()
 
-        if isReady {
+        if matched {
             resolveOnce { cont in
                 cont.resume()
             }
@@ -135,13 +140,18 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         lock.lock()
         let reason = lastLines.suffix(5).joined(separator: "\n")
         let status = proc.terminationStatus
+        let wasReady = isReady
         lock.unlock()
 
-        resolveOnce { cont in
-            cont.resume(throwing: ProcessRunnerError.processExited(
-                code: status,
-                output: reason.isEmpty ? "Process terminated" : reason
-            ))
+        if wasReady {
+            onTerminatedAfterReady?(status, reason.isEmpty ? "Process terminated" : reason)
+        } else {
+            resolveOnce { cont in
+                cont.resume(throwing: ProcessRunnerError.processExited(
+                    code: status,
+                    output: reason.isEmpty ? "Process terminated" : reason
+                ))
+            }
         }
     }
 
@@ -159,6 +169,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
             return
         }
         continuationResolved = true
+        isReady = true
         let cont = readyContinuation
         readyContinuation = nil
         lock.unlock()

@@ -29,6 +29,18 @@ public final class ForwardManager: ObservableObject {
         for fwd in forwards {
             states[fwd.id] = .idle
         }
+        checkInitialPortStates()
+    }
+
+    private func checkInitialPortStates() {
+        var seenPorts = Set<Int>()
+        for fwd in forwards.sorted(by: { $0.sortOrder < $1.sortOrder }) {
+            if seenPorts.contains(fwd.localPort) { continue }
+            if PortChecker.isPortOpen(fwd.localPort) {
+                states[fwd.id] = .ready
+            }
+            seenPorts.insert(fwd.localPort)
+        }
     }
 
     public func connectAll() {
@@ -67,6 +79,14 @@ public final class ForwardManager: ObservableObject {
         let runner = runnerFactory.makeRunner(for: forward)
         runners[forward.id] = runner
         states[forward.id] = .starting
+
+        runner.onTerminatedAfterReady = { [weak self] code, reason in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.runners[forward.id] = nil
+                self.states[forward.id] = .failed("Disconnected (exit \(code)): \(reason)")
+            }
+        }
 
         do {
             try await runner.startAndAwaitReady()
