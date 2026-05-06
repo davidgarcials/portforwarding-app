@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8"/>
+      <stop offset="100%" style="stop-color:#818cf8"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#38bdf8"/>
+      <stop offset="100%" style="stop-color:#818cf8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+
+  <!-- Left bracket -->
+  <path d="M300 340 L240 512 L300 684" fill="none" stroke="url(#glow)" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Right bracket -->
+  <path d="M724 340 L784 512 L724 684" fill="none" stroke="url(#glow)" stroke-width="42" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Arrow pointing right through center -->
+  <line x1="370" y1="512" x2="610" y2="512" stroke="url(#line)" stroke-width="36" stroke-linecap="round"/>
+  <path d="M580 462 L640 512 L580 562" fill="none" stroke="url(#line)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Port dots -->
+  <circle cx="340" cy="420" r="18" fill="#22c55e"/>
+  <circle cx="340" cy="512" r="18" fill="#22c55e"/>
+  <circle cx="340" cy="604" r="18" fill="#22c55e"/>
+</svg>
