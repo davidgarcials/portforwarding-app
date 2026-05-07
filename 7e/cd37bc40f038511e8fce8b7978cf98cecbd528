@@ -1,0 +1,21 @@
+Resources/Install.command
+  s_a1aff0b8f3aeec::t_1849243af35d0c 1-25
+README.md
+  s_a1aff0b8f3aeec::t_b57d952a0ea000 26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "7ecd37bc40f038511e8fce8b7978cf98cecbd528",
+  "prompts": {},
+  "sessions": {
+    "s_a1aff0b8f3aeec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d9c696a-d594-4350-a96c-3d00dc7f0258",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
