@@ -23,13 +23,18 @@
   <img src="https://img.shields.io/github/v/release/davidgarcials/portforwarding-app?style=for-the-badge" alt="Latest Release"/>
 </p>
 
-> **Quick install (DMG):** Download the `.dmg`, open it, and double-click **Install.command**. It copies the app to `/Applications`, removes the quarantine attribute, and launches it.
->
-> **Alternative (ZIP):** Download the `.zip`, extract, and run:
+> **Quick install:** Run this in Terminal:
 > ```bash
-> xattr -cr PortForwarding.app
-> mv PortForwarding.app /Applications/
+> curl -sL https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.app.zip -o /tmp/pf.zip \
+>   && unzip -o /tmp/pf.zip -d /tmp/pf > /dev/null \
+>   && rm -rf /Applications/PortForwarding.app \
+>   && mv /tmp/pf/PortForwarding.app /Applications/ \
+>   && xattr -cr /Applications/PortForwarding.app \
+>   && rm -rf /tmp/pf /tmp/pf.zip \
+>   && open /Applications/PortForwarding.app
 > ```
+>
+> **Alternative:** Download the [DMG](https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.dmg) or [ZIP](https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.app.zip) manually, then run `xattr -cr /Applications/PortForwarding.app` after copying to Applications.
 
 ---
 
