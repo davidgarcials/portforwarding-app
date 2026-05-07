@@ -1,0 +1,29 @@
+Sources/Domain/ForwardManager.swift
+  s_d8234b8f12aca8::t_f75f14893c68d6 139
+  s_d8234b8f12aca8::t_ffa7cb33d77d6c 23
+  s_d8234b8f12aca8::t_37bb3ef17c9315 157-161
+  s_d8234b8f12aca8::t_af8ecba0f37aa4 240
+  s_d8234b8f12aca8::t_e1b2ae0499aea2 35,40
+Sources/App/PortForwardingApp.swift
+  s_d8234b8f12aca8::t_e70cff6a834e40 7-21
+Sources/Domain/NotificationService.swift
+  s_d8234b8f12aca8::t_67073cc28615b6 1-74
+Sources/TestRunner/main.swift
+  s_d8234b8f12aca8::t_9bf055cfd9b909 225-334
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "310a0221dc649e07612b54a7bc6661fe6b4a6ef1",
+  "prompts": {},
+  "sessions": {
+    "s_d8234b8f12aca8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dc34352b-7c70-476e-9827-1990ccd56570",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
