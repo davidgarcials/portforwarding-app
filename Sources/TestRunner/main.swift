@@ -222,6 +222,116 @@ await testAsync("Stop terminates running process") {
     try await Task.sleep(nanoseconds: 500_000_000)
 }
 
+// MARK: - ForwardManager Notification Tests
+
+print("\n=== ForwardManager Notification Tests ===")
+
+final class MockNotifier: PortDropNotifying {
+    var onReconnectRequested: ((UUID) -> Void)?
+    var droppedForwards: [PortForward] = []
+
+    func requestPermission() {}
+    func sendPortDropped(forward: PortForward) {
+        droppedForwards.append(forward)
+    }
+}
+
+final class MockRunnerFactory: ProcessRunnerFactory {
+    var lastRunner: MockProcessRunner?
+    func makeRunner(for forward: PortForward) -> ProcessRunning {
+        let runner = MockProcessRunner()
+        lastRunner = runner
+        return runner
+    }
+}
+
+final class MockProcessRunner: ProcessRunning {
+    var onTerminatedAfterReady: ((Int32, String) -> Void)?
+    var started = false
+    var stopped = false
+
+    func startAndAwaitReady() async throws {
+        started = true
+    }
+    func stop() {
+        stopped = true
+    }
+}
+
+await testAsync("Notifies on ready-to-failed transition via health check") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "test-notify", localPort: 59432)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run { manager.workspaces = [ws] }
+
+    await manager.connect(fwd)
+    let stateAfterConnect = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(stateAfterConnect, .ready, "should be ready after connect")
+    assertEqual(notifier.droppedForwards.count, 0, "no notification yet")
+
+    await MainActor.run { manager.states[fwd.id] = .failed("Connection lost") }
+    assertEqual(notifier.droppedForwards.count, 0, "state set directly doesn't notify")
+}
+
+await testAsync("Notifies when process terminates after ready") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "test-term", localPort: 59433)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run { manager.workspaces = [ws] }
+
+    await manager.connect(fwd)
+    let runner = factory.lastRunner!
+    runner.onTerminatedAfterReady?(1, "connection refused")
+    try await Task.sleep(nanoseconds: 200_000_000)
+    let count = notifier.droppedForwards.count
+    assertEqual(count, 1, "should have notified once")
+    assertEqual(notifier.droppedForwards.first?.name, "test-term")
+}
+
+await testAsync("Reconnect by forwardId calls connect") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "reconnect-test", localPort: 59434)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .failed("lost")
+    }
+
+    await MainActor.run { manager.reconnect(forwardId: fwd.id) }
+    try await Task.sleep(nanoseconds: 200_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "should be ready after reconnect")
+}
+
 // MARK: - Results
 
 print("\n=== Results ===")
