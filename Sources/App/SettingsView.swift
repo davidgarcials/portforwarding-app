@@ -17,6 +17,15 @@ struct SettingsView: View {
             toolbar
             Divider()
             workspaceList
+            Divider()
+            HStack {
+                Text("v\(updateChecker.currentVersion)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
         }
         .frame(minWidth: 700, minHeight: 500)
         .sheet(item: $addingToWorkspace) { ws in
