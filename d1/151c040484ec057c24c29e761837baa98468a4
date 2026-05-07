@@ -1,0 +1,25 @@
+Sources/App/SettingsView.swift
+  s_a1aff0b8f3aeec::t_2018e2bb2640af 15
+README.md
+  s_a1aff0b8f3aeec::t_2018e2bb2640af 67,108,171-172
+Sources/App/PortForwardingApp.swift
+  s_a1aff0b8f3aeec::t_2018e2bb2640af 14,32
+Sources/Domain/ConfigStore.swift
+  s_a1aff0b8f3aeec::t_2018e2bb2640af 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "d1151c040484ec057c24c29e761837baa98468a4",
+  "prompts": {},
+  "sessions": {
+    "s_a1aff0b8f3aeec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d9c696a-d594-4350-a96c-3d00dc7f0258",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
