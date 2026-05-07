@@ -1,0 +1,33 @@
+Sources/App/UpdateBannerView.swift
+  s_a1aff0b8f3aeec::t_af5858fc235685 1-71
+Sources/Domain/UpdateChecker.swift
+  s_a1aff0b8f3aeec::t_83f6518baa2933 1-184,186-223
+  s_a1aff0b8f3aeec::t_411eef2e29f7ef 185
+Sources/App/PortForwardingApp.swift
+  s_a1aff0b8f3aeec::t_bfa9f2d8f1fdc2 33
+  s_a1aff0b8f3aeec::t_428e8dda4cc392 39-40,42-50
+  s_a1aff0b8f3aeec::t_483fab63bbe577 9,26
+  s_a1aff0b8f3aeec::t_89d8ac38b19aee 28
+Sources/App/SettingsView.swift
+  s_a1aff0b8f3aeec::t_130f9aaae34482 6,12-16
+Resources/Info.plist
+  s_a1aff0b8f3aeec::t_89d5d1641a8aa7 14
+Sources/App/MenuBarView.swift
+  s_a1aff0b8f3aeec::t_2f2dcd1db572ff 6,12-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "cdcb86e201f35332c5d9f012e206ea344cba3111",
+  "prompts": {},
+  "sessions": {
+    "s_a1aff0b8f3aeec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d9c696a-d594-4350-a96c-3d00dc7f0258",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
