@@ -3,22 +3,10 @@ import Foundation
 public struct AppConfig: Codable {
     public var version: Int = 1
     public var workspacePaths: [String]
-    public var hotkey: HotkeyConfig?
 
-    public init(version: Int = 1, workspacePaths: [String] = [], hotkey: HotkeyConfig? = nil) {
+    public init(version: Int = 1, workspacePaths: [String] = []) {
         self.version = version
         self.workspacePaths = workspacePaths
-        self.hotkey = hotkey
-    }
-}
-
-public struct HotkeyConfig: Codable, Equatable {
-    public var keyCode: UInt16
-    public var modifiers: UInt
-
-    public init(keyCode: UInt16, modifiers: UInt) {
-        self.keyCode = keyCode
-        self.modifiers = modifiers
     }
 }
 
