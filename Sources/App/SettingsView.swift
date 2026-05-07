@@ -3,40 +3,6 @@ import PortForwardingLib
 
 struct SettingsView: View {
     @ObservedObject var manager: ForwardManager
-    @State private var selectedTab = 0
-
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            PortForwardsTab(manager: manager)
-                .tabItem { Label("Port Forwards", systemImage: "network") }
-                .tag(0)
-            PreferencesTab()
-                .tabItem { Label("Preferences", systemImage: "gear") }
-                .tag(1)
-        }
-        .frame(minWidth: 700, minHeight: 500)
-        .onAppear { selectedTab = 0 }
-    }
-}
-
-// MARK: - Preferences Tab
-
-struct PreferencesTab: View {
-    var body: some View {
-        Form {
-            Section("Global Shortcut") {
-                Text("Coming soon")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-    }
-}
-
-// MARK: - Port Forwards Tab
-
-struct PortForwardsTab: View {
-    @ObservedObject var manager: ForwardManager
     @State private var addingToWorkspace: Workspace?
     @State private var editingForward: PortForward?
 
@@ -46,6 +12,7 @@ struct PortForwardsTab: View {
             Divider()
             workspaceList
         }
+        .frame(minWidth: 700, minHeight: 500)
         .sheet(item: $addingToWorkspace) { ws in
             ForwardFormView(title: "Add Forward") { forward in
                 manager.addForward(forward, to: ws)
