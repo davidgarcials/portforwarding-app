@@ -10,14 +10,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.dmg">
-    <img src="https://img.shields.io/badge/Download-DMG-blue?style=for-the-badge&logo=apple" alt="Download DMG"/>
-  </a>
-  &nbsp;
-  <a href="https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.app.zip">
-    <img src="https://img.shields.io/badge/Download-ZIP-lightgrey?style=for-the-badge&logo=apple" alt="Download ZIP"/>
-  </a>
-  &nbsp;
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=for-the-badge&logo=apple" alt="macOS 14+"/>
   &nbsp;
   <img src="https://img.shields.io/github/v/release/davidgarcials/portforwarding-app?style=for-the-badge" alt="Latest Release"/>
@@ -33,8 +25,6 @@
 >   && rm -rf /tmp/pf /tmp/pf.zip \
 >   && open /Applications/PortForwarding.app
 > ```
->
-> **Alternative:** Download the [DMG](https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.dmg) or [ZIP](https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.app.zip) manually, then run `xattr -cr /Applications/PortForwarding.app` after copying to Applications.
 
 ---
 
