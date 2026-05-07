@@ -1,0 +1,50 @@
+Sources/App/HotkeyRecorderView.swift
+  s_d8234b8f12aca8::t_1877ebbdc707e1 1-81
+Sources/TestRunner/main.swift
+  s_d8234b8f12aca8::t_f46c9d8438a8b9 225-255
+Sources/Domain/ConfigStore.swift
+  s_d8234b8f12aca8::t_e277922d0c99d3 6,8,11-21
+Sources/App/GlobalHotkeyManager.swift
+  s_a1aff0b8f3aeec::t_792cbaafee81b0 7,11-12,18,34-46,48,50,52-55,60,66-71,76-79
+  s_d8234b8f12aca8::t_19a29b40c33ea1 1-6,8-10,13-17,19-33,47,49,51,56-59,61-65,72-75,80-114
+Sources/App/SettingsView.swift
+  s_a1aff0b8f3aeec::t_9c4e9b8bb0cb08 160-174,178-180
+  s_d8234b8f12aca8::t_4b3df1fdb60a18 147-159,175-177,181-185
+  s_d8234b8f12aca8::t_ea394b11b47c6c 6-21
+Sources/App/PortForwardingApp.swift
+  s_d8234b8f12aca8::t_167a72b7087163 7,10,13-14,18-19,21-24,30-33,45-67
+Sources/Domain/ShellEnvironment.swift
+  s_4b84960253842e::t_48f18b65e4362b 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "99452adc2d5de5529e154e4c5cbaead3cb1c05b4",
+  "prompts": {},
+  "sessions": {
+    "s_4b84960253842e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d774ceb1-75df-4c17-a1b6-40923f9a8e9a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    },
+    "s_a1aff0b8f3aeec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d9c696a-d594-4350-a96c-3d00dc7f0258",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    },
+    "s_d8234b8f12aca8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dc34352b-7c70-476e-9827-1990ccd56570",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
