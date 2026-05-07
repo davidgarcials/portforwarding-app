@@ -64,7 +64,9 @@ Add new forwards by browsing namespaces and services directly from your cluster 
 
 - **Workspace-based configuration** — each workspace folder has its own `.portforwards.json`, add multiple workspaces via folder picker
 - **Menu bar popover** with status dots (green/yellow/red/gray) and per-forward start/stop controls, grouped by workspace
-- **Settings window** for managing workspaces and port forward configurations
+- **Settings window** for managing workspaces and port forward configurations with a tabbed interface (Port Forwards & Preferences)
+- **Global keyboard shortcut** — configure a custom hotkey to open the Settings window from anywhere, even when the app is in the background
+- **Accessibility permission handling** — automatic detection with a guided "Grant Access" prompt in the Preferences tab
 - **Kubectl discovery** — add new forwards by browsing namespaces, services, and ports directly from your cluster
 - **Service port details** — see available ports with type (grpc, http, metrics) and target port info
 - **Connect All** launches all enabled forwards sequentially across all workspaces
@@ -73,12 +75,14 @@ Add new forwards by browsing namespaces and services directly from your cluster 
 - **Startup detection** checks which ports are already listening and initializes state accordingly
 - **Health monitoring** polls ports every 10 seconds to detect dropped connections and external changes
 - **Process death detection** updates the UI immediately when a kubectl process exits unexpectedly
+- **Drop notifications** — macOS notification with a reconnect button when a port-forward drops unexpectedly
 
 ## Requirements
 
 - macOS 14+
 - `kubectl` available in PATH
 - A configured kubeconfig with access to your clusters
+- **Accessibility permission** (optional) — required for the global hotkey to work when the app is not focused. The app will prompt you to grant it.
 
 ## Build
 
@@ -105,7 +109,8 @@ The app bundle is created at `build/PortForwarding.app`. Copy it to `/Applicatio
 3. **Click** the menu bar icon to see all configured forwards grouped by workspace with their connection status
 4. **Start/stop** individual forwards with the play/stop buttons, or use **Connect All** / **Disconnect All**
 5. **Add forwards** per workspace via the **+** button on each workspace header, which discovers namespaces and services from your cluster
-6. **Monitor** — the app checks port health every 10 seconds and updates status automatically
+6. **Set a global hotkey** in Preferences to quickly open Settings from anywhere (grant Accessibility permission when prompted)
+7. **Monitor** — the app checks port health every 10 seconds and updates status automatically
 
 ### Status indicators
 
@@ -168,8 +173,8 @@ Example `.portforwards.json`:
 
 ```
 Sources/
-├── App/              # SwiftUI views (@main, MenuBarView, SettingsView)
-├── Domain/           # Business logic (ForwardManager, ConfigStore, PortForward, KubectlDiscovery)
+├── App/              # SwiftUI views (@main, MenuBarView, SettingsView, HotkeyRecorderView, GlobalHotkeyManager)
+├── Domain/           # Business logic (ForwardManager, ConfigStore, PortForward, KubectlDiscovery, ShellEnvironment)
 └── Process/          # Child process management (ProcessRunner)
 ```
 
@@ -180,6 +185,8 @@ Sources/
 | **ConfigStore** | JSON persistence with atomic writes to `~/Library/Application Support/` |
 | **KubectlDiscovery** | Fetches namespaces and services from kubectl for the add-forward form |
 | **PortChecker** | TCP probe on local ports to detect existing connections |
+| **GlobalHotkeyManager** | Registers global and local keyboard event monitors, manages Accessibility permissions |
+| **ShellEnvironment** | Resolves the user's shell environment for consistent process execution |
 
 ## License
 
