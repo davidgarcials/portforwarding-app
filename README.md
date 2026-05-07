@@ -30,15 +30,8 @@
 
 ## Screenshots
 
-### Menu bar icon
-The app lives in the macOS menu bar as a minimal icon, always accessible.
-
-<p align="center">
-  <img src="Resources/screenshots/menubar-icon.png" alt="Menu bar icon" width="600"/>
-</p>
-
 ### Quick access popover
-Click the icon to see all your port forwards at a glance with live status indicators and start/stop controls.
+Click the menu bar icon to see all your port forwards at a glance with live status indicators and start/stop controls.
 
 <p align="center">
   <img src="Resources/screenshots/menubar-popover.png" alt="Menu bar popover" width="400"/>
@@ -51,7 +44,7 @@ Manage all your port forward configurations — connect, disconnect, edit, or de
   <img src="Resources/screenshots/settings-window.png" alt="Settings window" width="700"/>
 </p>
 
-### Add forward with kubectl discovery
+### Add forward
 Add new forwards by browsing namespaces and services directly from your cluster — no manual typing needed.
 
 <p align="center">
