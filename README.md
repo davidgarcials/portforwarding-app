@@ -23,7 +23,7 @@
   <img src="https://img.shields.io/github/v/release/davidgarcials/portforwarding-app?style=for-the-badge" alt="Latest Release"/>
 </p>
 
-> **Quick install (DMG):** Download the `.dmg`, open it, and drag `PortForwarding.app` to the `Applications` folder. Run `xattr -cr /Applications/PortForwarding.app` if macOS blocks it (the app is unsigned).
+> **Quick install (DMG):** Download the `.dmg`, open it, and double-click **Install.command**. It copies the app to `/Applications`, removes the quarantine attribute, and launches it.
 >
 > **Alternative (ZIP):** Download the `.zip`, extract, and run:
 > ```bash
