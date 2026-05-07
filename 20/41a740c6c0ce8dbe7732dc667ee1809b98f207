@@ -1,0 +1,20 @@
+Sources/App/SettingsView.swift
+  s_a1aff0b8f3aeec::t_63581ab714c8c2 7-8,10-11,13-14,16-17,19-38
+  s_a1aff0b8f3aeec::t_d2d9185fc9b3cc 6,9,12,15,18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "2041a740c6c0ce8dbe7732dc667ee1809b98f207",
+  "prompts": {},
+  "sessions": {
+    "s_a1aff0b8f3aeec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d9c696a-d594-4350-a96c-3d00dc7f0258",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
