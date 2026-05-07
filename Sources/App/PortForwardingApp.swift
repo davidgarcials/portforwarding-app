@@ -4,7 +4,21 @@ import PortForwardingLib
 
 @main
 struct PortForwardingApp: App {
-    @StateObject private var manager = ForwardManager(configStore: ConfigStore())
+    private let notificationService: NotificationService
+    @StateObject private var manager: ForwardManager
+
+    init() {
+        let notifier = NotificationService()
+        notifier.requestPermission()
+        self.notificationService = notifier
+        let mgr = ForwardManager(configStore: ConfigStore(), notifier: notifier)
+        self._manager = StateObject(wrappedValue: mgr)
+        notifier.onReconnectRequested = { [weak mgr] forwardId in
+            Task { @MainActor in
+                mgr?.reconnect(forwardId: forwardId)
+            }
+        }
+    }
 
     var body: some Scene {
         MenuBarExtra {

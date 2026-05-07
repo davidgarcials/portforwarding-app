@@ -20,6 +20,7 @@ public final class ForwardManager: ObservableObject {
     private var runners: [UUID: ProcessRunning] = [:]
     private let configStore: ConfigStore
     private let runnerFactory: ProcessRunnerFactory
+    private let notifier: PortDropNotifying?
     private var connectAllTask: Task<Void, Never>?
     private var healthCheckTask: Task<Void, Never>?
     private let healthCheckInterval: TimeInterval
@@ -31,10 +32,12 @@ public final class ForwardManager: ObservableObject {
     public init(
         configStore: ConfigStore,
         runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory(),
+        notifier: PortDropNotifying? = nil,
         healthCheckInterval: TimeInterval = 10
     ) {
         self.configStore = configStore
         self.runnerFactory = runnerFactory
+        self.notifier = notifier
         self.healthCheckInterval = healthCheckInterval
         self.workspaces = configStore.loadAllWorkspaces()
         for fwd in allForwards {
@@ -133,6 +136,7 @@ public final class ForwardManager: ObservableObject {
                 guard let self else { return }
                 self.runners[forward.id] = nil
                 self.states[forward.id] = .failed("Disconnected (exit \(code)): \(reason)")
+                self.notifier?.sendPortDropped(forward: forward)
             }
         }
 
@@ -148,6 +152,11 @@ public final class ForwardManager: ObservableObject {
         runners[forward.id]?.stop()
         runners[forward.id] = nil
         states[forward.id] = .stopped
+    }
+
+    public func reconnect(forwardId: UUID) {
+        guard let forward = allForwards.first(where: { $0.id == forwardId }) else { return }
+        Task { await connect(forward) }
     }
 
     public func disconnectAll() {
@@ -228,6 +237,7 @@ public final class ForwardManager: ObservableObject {
                     runners[fwd.id]?.stop()
                     runners[fwd.id] = nil
                     states[fwd.id] = .failed("Connection lost")
+                    notifier?.sendPortDropped(forward: fwd)
                 }
             case .idle, .stopped, .failed:
                 if portOpen && runners[fwd.id] == nil {
