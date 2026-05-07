@@ -1,0 +1,19 @@
+README.md
+  s_a1aff0b8f3aeec::t_7703ca1d468eef 26,28-34,36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "558fe53ac13f000b764063914952dbfad730882f",
+  "prompts": {},
+  "sessions": {
+    "s_a1aff0b8f3aeec": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d9c696a-d594-4350-a96c-3d00dc7f0258",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
