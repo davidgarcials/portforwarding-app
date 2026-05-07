@@ -3,11 +3,17 @@ import PortForwardingLib
 
 struct SettingsView: View {
     @ObservedObject var manager: ForwardManager
+    @ObservedObject var updateChecker: UpdateChecker
     @State private var addingToWorkspace: Workspace?
     @State private var editingForward: PortForward?
 
     var body: some View {
         VStack(spacing: 0) {
+            if updateChecker.availableUpdate != nil {
+                UpdateBannerView(updateChecker: updateChecker)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+            }
             toolbar
             Divider()
             workspaceList

@@ -3,11 +3,17 @@ import PortForwardingLib
 
 struct MenuBarView: View {
     @ObservedObject var manager: ForwardManager
+    @ObservedObject var updateChecker: UpdateChecker
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerSection
+            if updateChecker.availableUpdate != nil {
+                UpdateBannerView(updateChecker: updateChecker, compact: true)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+            }
             Divider()
             ForEach(manager.workspaces) { workspace in
                 workspaceSection(workspace)

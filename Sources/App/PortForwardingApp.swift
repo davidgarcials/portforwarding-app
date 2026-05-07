@@ -6,6 +6,7 @@ import PortForwardingLib
 struct PortForwardingApp: App {
     private let notificationService: NotificationService
     @StateObject private var manager: ForwardManager
+    @StateObject private var updateChecker = UpdateChecker()
 
     init() {
         let notifier = NotificationService()
@@ -22,24 +23,31 @@ struct PortForwardingApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarView(manager: manager)
+            MenuBarView(manager: manager, updateChecker: updateChecker)
         } label: {
-            MenuBarIcon()
+            MenuBarIcon(updateChecker: updateChecker)
         }
         .menuBarExtraStyle(.window)
 
         Window("Settings", id: "settings") {
-            SettingsView(manager: manager)
+            SettingsView(manager: manager, updateChecker: updateChecker)
         }
     }
 }
 
 struct MenuBarIcon: View {
+    var updateChecker: UpdateChecker?
+
     var body: some View {
-        if let image = loadTemplateImage() {
-            Image(nsImage: image)
-        } else {
-            Image(systemName: "network")
+        Group {
+            if let image = loadTemplateImage() {
+                Image(nsImage: image)
+            } else {
+                Image(systemName: "network")
+            }
+        }
+        .onAppear {
+            updateChecker?.startPeriodicChecks()
         }
     }
 
