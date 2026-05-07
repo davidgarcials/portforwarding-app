@@ -10,8 +10,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.dmg">
+    <img src="https://img.shields.io/badge/Download-DMG-blue?style=for-the-badge&logo=apple" alt="Download DMG"/>
+  </a>
+  &nbsp;
   <a href="https://github.com/davidgarcials/portforwarding-app/releases/latest/download/PortForwarding.app.zip">
-    <img src="https://img.shields.io/badge/Download-PortForwarding.app-blue?style=for-the-badge&logo=apple" alt="Download"/>
+    <img src="https://img.shields.io/badge/Download-ZIP-lightgrey?style=for-the-badge&logo=apple" alt="Download ZIP"/>
   </a>
   &nbsp;
   <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey?style=for-the-badge&logo=apple" alt="macOS 14+"/>
@@ -19,12 +23,13 @@
   <img src="https://img.shields.io/github/v/release/davidgarcials/portforwarding-app?style=for-the-badge" alt="Latest Release"/>
 </p>
 
-> **Quick install:** Download the zip, extract, and run the following commands:
+> **Quick install (DMG):** Download the `.dmg`, open it, and drag `PortForwarding.app` to the `Applications` folder. Run `xattr -cr /Applications/PortForwarding.app` if macOS blocks it (the app is unsigned).
+>
+> **Alternative (ZIP):** Download the `.zip`, extract, and run:
 > ```bash
 > xattr -cr PortForwarding.app
 > mv PortForwarding.app /Applications/
 > ```
-> The app is unsigned, so macOS requires removing the quarantine attribute before launching. It will appear in your menu bar.
 
 ---
 
