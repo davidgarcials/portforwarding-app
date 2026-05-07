@@ -222,6 +222,37 @@ await testAsync("Stop terminates running process") {
     try await Task.sleep(nanoseconds: 500_000_000)
 }
 
+// MARK: - HotkeyConfig Tests
+
+print("\n=== HotkeyConfig Tests ===")
+
+test("HotkeyConfig JSON round-trip") {
+    let config = HotkeyConfig(keyCode: 0x23, modifiers: 0x00180000)
+    let data = try JSONEncoder().encode(config)
+    let decoded = try JSONDecoder().decode(HotkeyConfig.self, from: data)
+    assertEqual(decoded, config)
+}
+
+test("AppConfig with hotkey persists and loads") {
+    let dir = try makeTempDir()
+    let store = ConfigStore(directory: dir)
+    let hotkey = HotkeyConfig(keyCode: 0x0F, modifiers: 0x00140000)
+    let config = AppConfig(workspacePaths: ["/tmp/ws"], hotkey: hotkey)
+    try store.saveAppConfig(config)
+    let loaded = try store.loadAppConfig()
+    assertEqual(loaded.hotkey, hotkey)
+    assertEqual(loaded.workspacePaths.count, 1)
+}
+
+test("AppConfig without hotkey loads with nil") {
+    let dir = try makeTempDir()
+    let store = ConfigStore(directory: dir)
+    let config = AppConfig(workspacePaths: [])
+    try store.saveAppConfig(config)
+    let loaded = try store.loadAppConfig()
+    assertNil(loaded.hotkey, "hotkey should be nil")
+}
+
 // MARK: - ForwardManager Notification Tests
 
 print("\n=== ForwardManager Notification Tests ===")

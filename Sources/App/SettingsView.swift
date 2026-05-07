@@ -3,6 +3,23 @@ import PortForwardingLib
 
 struct SettingsView: View {
     @ObservedObject var manager: ForwardManager
+    @ObservedObject var hotkeyManager: GlobalHotkeyManager
+
+    var body: some View {
+        TabView {
+            PortForwardsTab(manager: manager)
+                .tabItem { Label("Port Forwards", systemImage: "network") }
+            PreferencesTab(hotkeyManager: hotkeyManager)
+                .tabItem { Label("Preferences", systemImage: "gear") }
+        }
+        .frame(minWidth: 700, minHeight: 500)
+    }
+}
+
+// MARK: - Port Forwards Tab
+
+struct PortForwardsTab: View {
+    @ObservedObject var manager: ForwardManager
     @State private var addingToWorkspace: Workspace?
     @State private var editingForward: PortForward?
 
@@ -12,7 +29,6 @@ struct SettingsView: View {
             Divider()
             workspaceList
         }
-        .frame(minWidth: 700, minHeight: 500)
         .sheet(item: $addingToWorkspace) { ws in
             ForwardFormView(title: "Add Forward") { forward in
                 manager.addForward(forward, to: ws)
@@ -127,6 +143,45 @@ struct SettingsView: View {
         manager.workspaces.first { $0.forwards.contains(where: { $0.id == forward.id }) }
     }
 }
+
+// MARK: - Preferences Tab
+
+struct PreferencesTab: View {
+    @ObservedObject var hotkeyManager: GlobalHotkeyManager
+
+    var body: some View {
+        Form {
+            Section("Global Shortcut") {
+                HStack {
+                    Text("Open Settings:")
+                    Spacer()
+                    HotkeyRecorderView(hotkeyManager: hotkeyManager)
+                }
+
+                if !hotkeyManager.hasAccessibilityPermission {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Accessibility permission is required for the global shortcut to work when the app is in the background.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Grant Access") {
+                            hotkeyManager.requestAccessibilityPermission()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear {
+            hotkeyManager.refreshAccessibilityStatus()
+        }
+    }
+}
+
+// MARK: - Forward Settings Row
 
 struct ForwardSettingsRow: View {
     let forward: PortForward
