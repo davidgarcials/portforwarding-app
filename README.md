@@ -105,7 +105,8 @@ The app bundle is created at `build/PortForwarding.app`. Copy it to `/Applicatio
 3. **Click** the menu bar icon to see all configured forwards grouped by workspace with their connection status
 4. **Start/stop** individual forwards with the play/stop buttons, or use **Connect All** / **Disconnect All**
 5. **Add forwards** per workspace via the **+** button on each workspace header, which discovers namespaces and services from your cluster
-6. **Monitor** — the app checks port health every 10 seconds and updates status automatically
+6. **Import forwards** — click the ↓ button on a workspace header to import forwards from a configuration file (any name, as long as the content follows the `.portforwards.json` format). Duplicate local ports are skipped automatically.
+7. **Monitor** — the app checks port health every 10 seconds and updates status automatically
 
 ### Status indicators
 
@@ -163,6 +164,17 @@ Example `.portforwards.json`:
   ]
 }
 ```
+
+### Sharing and importing configurations
+
+To share your port forward setup with a teammate:
+
+1. Send them the `.portforwards.json` file from your workspace folder (the file can be renamed to anything)
+2. The recipient opens **Settings**, finds the target workspace, and clicks the **↓** (import) button
+3. Select the received file — forwards are merged into the workspace, skipping any with duplicate local ports
+4. UUIDs are regenerated on import, so the same file can be imported safely into multiple workspaces
+
+You can also commit `.portforwards.json` to your project repository so the whole team shares the same configuration. When a teammate clones the repo and adds the folder as a workspace, the forwards are loaded automatically.
 
 ## Architecture
 

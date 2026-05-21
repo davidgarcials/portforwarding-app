@@ -191,6 +191,27 @@ public final class ForwardManager: ObservableObject {
         saveWorkspaceConfig(workspaces[wsIdx])
     }
 
+    @discardableResult
+    public func importForwards(_ forwards: [PortForward], to workspace: Workspace) -> Int {
+        guard let wsIdx = workspaces.firstIndex(where: { $0.path == workspace.path }) else { return 0 }
+        let existingPorts = Set(workspaces[wsIdx].forwards.map(\.localPort))
+        var imported = 0
+
+        for fwd in forwards {
+            if existingPorts.contains(fwd.localPort) { continue }
+            var newFwd = fwd
+            newFwd.id = UUID()
+            workspaces[wsIdx].forwards.append(newFwd)
+            states[newFwd.id] = .idle
+            imported += 1
+        }
+
+        if imported > 0 {
+            saveWorkspaceConfig(workspaces[wsIdx])
+        }
+        return imported
+    }
+
     public func deleteForward(_ forward: PortForward, from workspace: Workspace) {
         guard let wsIdx = workspaces.firstIndex(where: { $0.path == workspace.path }) else { return }
         disconnect(forward)
