@@ -496,6 +496,109 @@ await testAsync("hasAnyReadyForward is false when all failed") {
     assert(!result, "should be false when all failed")
 }
 
+// MARK: - importForwards Tests
+
+print("\n=== importForwards Tests ===")
+
+await testAsync("importForwards adds forwards to workspace with new UUIDs") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let ws = Workspace(path: tmpDir.path, forwards: [])
+    await MainActor.run { manager.workspaces = [ws] }
+
+    let originalId = UUID()
+    let imported = [
+        PortForward(id: originalId, name: "imported-svc", service: "svc-a",
+                    namespace: "ns-a", localPort: 9090, remotePort: 80)
+    ]
+
+    let count = await MainActor.run {
+        manager.importForwards(imported, to: ws)
+        return manager.workspaces[0].forwards.count
+    }
+    assertEqual(count, 1, "should have 1 forward after import")
+
+    let addedFwd = await MainActor.run { manager.workspaces[0].forwards[0] }
+    assertEqual(addedFwd.name, "imported-svc", "name should match")
+    assertEqual(addedFwd.service, "svc-a", "service should match")
+    assertEqual(addedFwd.localPort, 9090, "localPort should match")
+    assert(addedFwd.id != originalId, "UUID should be regenerated")
+
+    let state = await MainActor.run { manager.states[addedFwd.id] }
+    assertEqual(state, .idle, "state should be idle")
+}
+
+await testAsync("importForwards skips forwards with duplicate localPort") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let existing = makeForward(name: "existing", localPort: 8080)
+    let ws = Workspace(path: tmpDir.path, forwards: [existing])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[existing.id] = .idle
+    }
+
+    let imported = [
+        PortForward(name: "dup-port", service: "svc-dup", namespace: "ns",
+                    localPort: 8080, remotePort: 80),
+        PortForward(name: "new-port", service: "svc-new", namespace: "ns",
+                    localPort: 9090, remotePort: 80),
+    ]
+
+    let count = await MainActor.run {
+        manager.importForwards(imported, to: ws)
+        return manager.workspaces[0].forwards.count
+    }
+    assertEqual(count, 2, "should have 2 forwards (1 existing + 1 new, 1 skipped)")
+
+    let names = await MainActor.run {
+        manager.workspaces[0].forwards.map(\.name)
+    }
+    assert(names.contains("existing"), "should keep existing forward")
+    assert(names.contains("new-port"), "should add non-duplicate forward")
+    assert(!names.contains("dup-port"), "should skip duplicate localPort")
+}
+
+await testAsync("importForwards returns count of imported forwards") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let ws = Workspace(path: tmpDir.path, forwards: [])
+    await MainActor.run { manager.workspaces = [ws] }
+
+    let imported = [
+        PortForward(name: "svc-1", service: "svc-1", namespace: "ns",
+                    localPort: 3000, remotePort: 80),
+        PortForward(name: "svc-2", service: "svc-2", namespace: "ns",
+                    localPort: 3001, remotePort: 80),
+    ]
+
+    let result = await MainActor.run {
+        manager.importForwards(imported, to: ws)
+    }
+    assertEqual(result, 2, "should report 2 imported")
+}
+
 // MARK: - Results
 
 print("\n=== Results ===")

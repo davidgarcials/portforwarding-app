@@ -6,6 +6,7 @@ struct SettingsView: View {
     @ObservedObject var updateChecker: UpdateChecker
     @State private var addingToWorkspace: Workspace?
     @State private var editingForward: PortForward?
+    @State private var importAlert: ImportAlert?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,6 +40,9 @@ struct SettingsView: View {
                     manager.updateForward(updated, in: ws)
                 }
             }
+        }
+        .alert(item: $importAlert) { alert in
+            Alert(title: Text(alert.title), message: Text(alert.message))
         }
     }
 
@@ -97,6 +101,12 @@ struct SettingsView: View {
             .buttonStyle(.borderless)
             .help("Add forward to this workspace")
 
+            Button(action: { importForwards(to: workspace) }) {
+                Image(systemName: "square.and.arrow.down")
+            }
+            .buttonStyle(.borderless)
+            .help("Import forwards from .portforwards.json")
+
             workspaceConnectButton(workspace)
 
             Button(action: { manager.removeWorkspace(workspace) }) {
@@ -138,9 +148,48 @@ struct SettingsView: View {
         }
     }
 
+    private func importForwards(to workspace: Workspace) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Select a port forwards configuration file to import"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let config = try JSONDecoder().decode(WorkspaceConfig.self, from: data)
+
+            if config.forwards.isEmpty {
+                importAlert = ImportAlert(title: "Nothing to Import",
+                                          message: "The selected file contains no forwards.")
+                return
+            }
+
+            let count = manager.importForwards(config.forwards, to: workspace)
+            if count == 0 {
+                importAlert = ImportAlert(title: "No New Forwards",
+                                          message: "All forwards in the file already exist in this workspace (duplicate local ports).")
+            } else {
+                importAlert = ImportAlert(title: "Import Successful",
+                                          message: "Imported \(count) forward\(count == 1 ? "" : "s") into \(workspace.name).")
+            }
+        } catch {
+            importAlert = ImportAlert(title: "Import Failed",
+                                      message: "Could not read the file: \(error.localizedDescription)")
+        }
+    }
+
     private func workspaceForForward(_ forward: PortForward) -> Workspace? {
         manager.workspaces.first { $0.forwards.contains(where: { $0.id == forward.id }) }
     }
+}
+
+struct ImportAlert: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
 }
 
 struct ForwardSettingsRow: View {
