@@ -1,0 +1,30 @@
+Sources/TestRunner/main.swift
+  s_b005c1b9606a2a::t_53bf0bedc7d5c5 499-601
+README.md
+  s_b005c1b9606a2a::t_984e207e29dfef 108-109
+  s_b005c1b9606a2a::t_6cf4a6dd9c7216 168-178
+Sources/Domain/ForwardManager.swift
+  s_b005c1b9606a2a::t_ae942c0e1a29dc 194-214
+Sources/App/SettingsView.swift
+  s_b005c1b9606a2a::t_675a37f06c7c92 44-46
+  s_b005c1b9606a2a::t_522691821f4287 151-155,157-183,189-192
+  s_b005c1b9606a2a::t_df46ce06639b43 156
+  s_b005c1b9606a2a::t_e092b3d8f9bcb4 9
+  s_b005c1b9606a2a::t_21dc74d518b1bf 104-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "3630cdd826603d3a58be4b15f03c2b0ea9f1cc3e",
+  "prompts": {},
+  "sessions": {
+    "s_b005c1b9606a2a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dfb02037-6fa4-42ea-9dcc-63dff89d7484",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
