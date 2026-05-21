@@ -222,6 +222,36 @@ await testAsync("Stop terminates running process") {
     try await Task.sleep(nanoseconds: 500_000_000)
 }
 
+await testAsync("Detects readiness marker when output is immediate") {
+    let runner = ProcessRunner(
+        executablePath: "/bin/sh",
+        arguments: ["-c", "echo 'Forwarding from 127.0.0.1:3010 -> 80'; sleep 10"],
+        readinessMarker: "Forwarding from",
+        timeoutSeconds: 3
+    )
+    try await runner.startAndAwaitReady()
+    runner.stop()
+}
+
+await testAsync("Fails on immediate exit with error") {
+    let runner = ProcessRunner(
+        executablePath: "/bin/sh",
+        arguments: ["-c", "exit 1"],
+        readinessMarker: "Forwarding from",
+        timeoutSeconds: 3
+    )
+    do {
+        try await runner.startAndAwaitReady()
+        assert(false, "should have thrown")
+    } catch let error as ProcessRunnerError {
+        if case .processExited(let code, _) = error {
+            assertEqual(code, Int32(1))
+        } else {
+            assert(false, "expected processExited, got \(error)")
+        }
+    }
+}
+
 // MARK: - ForwardManager Notification Tests
 
 print("\n=== ForwardManager Notification Tests ===")
@@ -330,6 +360,140 @@ await testAsync("Reconnect by forwardId calls connect") {
     try await Task.sleep(nanoseconds: 200_000_000)
     let state = await MainActor.run { manager.states[fwd.id] }
     assertEqual(state, .ready, "should be ready after reconnect")
+}
+
+// MARK: - Forward Status Property Tests
+
+print("\n=== Forward Status Property Tests ===")
+
+await testAsync("hasAnyFailedForward is false when all idle") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "idle-test", localPort: 59440)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .idle
+    }
+
+    let result = await MainActor.run { manager.hasAnyFailedForward }
+    assert(!result, "should be false when all idle")
+}
+
+await testAsync("hasAnyFailedForward is true when one forward failed") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd1 = makeForward(name: "ok-fwd", localPort: 59441)
+    let fwd2 = makeForward(name: "fail-fwd", localPort: 59442)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd1, fwd2])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd1.id] = .ready
+        manager.states[fwd2.id] = .failed("Connection lost")
+    }
+
+    let result = await MainActor.run { manager.hasAnyFailedForward }
+    assert(result, "should be true when one forward is failed")
+}
+
+await testAsync("hasAnyFailedForward is false when all ready") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "ready-fwd", localPort: 59443)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .ready
+    }
+
+    let result = await MainActor.run { manager.hasAnyFailedForward }
+    assert(!result, "should be false when all ready")
+}
+
+await testAsync("hasAnyReadyForward is false when all idle") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "idle-test2", localPort: 59450)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .idle
+    }
+
+    let result = await MainActor.run { manager.hasAnyReadyForward }
+    assert(!result, "should be false when all idle")
+}
+
+await testAsync("hasAnyReadyForward is true when one forward ready") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd1 = makeForward(name: "ready-fwd2", localPort: 59451)
+    let fwd2 = makeForward(name: "idle-fwd2", localPort: 59452)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd1, fwd2])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd1.id] = .ready
+        manager.states[fwd2.id] = .idle
+    }
+
+    let result = await MainActor.run { manager.hasAnyReadyForward }
+    assert(result, "should be true when one forward is ready")
+}
+
+await testAsync("hasAnyReadyForward is false when all failed") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "fail-fwd2", localPort: 59453)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .failed("Connection lost")
+    }
+
+    let result = await MainActor.run { manager.hasAnyReadyForward }
+    assert(!result, "should be false when all failed")
 }
 
 // MARK: - Results

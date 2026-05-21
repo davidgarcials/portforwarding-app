@@ -25,7 +25,11 @@ struct PortForwardingApp: App {
         MenuBarExtra {
             MenuBarView(manager: manager, updateChecker: updateChecker)
         } label: {
-            MenuBarIcon(updateChecker: updateChecker)
+            MenuBarIcon(
+                hasReady: manager.hasAnyReadyForward,
+                hasFailure: manager.hasAnyFailedForward,
+                updateChecker: updateChecker
+            )
         }
         .menuBarExtraStyle(.window)
 
@@ -36,11 +40,19 @@ struct PortForwardingApp: App {
 }
 
 struct MenuBarIcon: View {
+    var hasReady: Bool
+    var hasFailure: Bool
     var updateChecker: UpdateChecker?
+
+    private var badgeColor: NSColor? {
+        if hasFailure { return .systemRed }
+        if hasReady { return .systemGreen }
+        return nil
+    }
 
     var body: some View {
         Group {
-            if let image = loadTemplateImage() {
+            if let image = loadMenuBarImage() {
                 Image(nsImage: image)
             } else {
                 Image(systemName: "network")
@@ -51,7 +63,7 @@ struct MenuBarIcon: View {
         }
     }
 
-    private func loadTemplateImage() -> NSImage? {
+    private func loadMenuBarImage() -> NSImage? {
         let bundlePath = Bundle.main.bundlePath
         let resourcesPath = (bundlePath as NSString).appendingPathComponent("Contents/Resources")
 
@@ -60,9 +72,34 @@ struct MenuBarIcon: View {
             if let img = NSImage(contentsOfFile: imagePath) {
                 img.isTemplate = true
                 img.size = NSSize(width: 18, height: 18)
-                return img
+                guard let color = badgeColor else { return img }
+                return withBadge(img, badgeColor: color)
             }
         }
         return nil
+    }
+
+    private func withBadge(_ templateImage: NSImage, badgeColor: NSColor) -> NSImage {
+        let size = templateImage.size
+        let badgeSize: CGFloat = 6
+        let padding: CGFloat = 0.5
+        let badgeRect = NSRect(
+            x: size.width - badgeSize - padding,
+            y: padding,
+            width: badgeSize,
+            height: badgeSize
+        )
+
+        let result = NSImage(size: size, flipped: false) { rect in
+            NSColor.labelColor.setFill()
+            rect.fill()
+            templateImage.draw(in: rect, from: rect, operation: .destinationIn, fraction: 1.0)
+
+            badgeColor.setFill()
+            NSBezierPath(ovalIn: badgeRect).fill()
+            return true
+        }
+        result.isTemplate = false
+        return result
     }
 }

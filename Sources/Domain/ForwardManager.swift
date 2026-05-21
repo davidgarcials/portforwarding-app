@@ -29,6 +29,14 @@ public final class ForwardManager: ObservableObject {
         workspaces.flatMap(\.forwards)
     }
 
+    public var hasAnyFailedForward: Bool {
+        states.values.contains { if case .failed = $0 { return true } else { return false } }
+    }
+
+    public var hasAnyReadyForward: Bool {
+        states.values.contains { $0 == .ready }
+    }
+
     public init(
         configStore: ConfigStore,
         runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory(),

@@ -20,6 +20,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
     private var readyContinuation: CheckedContinuation<Void, Error>?
     private var continuationResolved = false
     private var isReady = false
+    private var pendingResult: Result<Void, Error>?
 
     public var onTerminatedAfterReady: ((Int32, String) -> Void)?
 
@@ -56,6 +57,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         self.process = proc
         self.continuationResolved = false
         self.isReady = false
+        self.pendingResult = nil
         lock.unlock()
 
         proc.terminationHandler = { [weak self] terminatedProc in
@@ -77,8 +79,10 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
 
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             lock.lock()
-            if continuationResolved {
+            if let result = pendingResult {
+                pendingResult = nil
                 lock.unlock()
+                cont.resume(with: result)
                 return
             }
             self.readyContinuation = cont
@@ -130,9 +134,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         lock.unlock()
 
         if matched {
-            resolveOnce { cont in
-                cont.resume()
-            }
+            resolveOnce(result: .success(()))
         }
     }
 
@@ -146,36 +148,34 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         if wasReady {
             onTerminatedAfterReady?(status, reason.isEmpty ? "Process terminated" : reason)
         } else {
-            resolveOnce { cont in
-                cont.resume(throwing: ProcessRunnerError.processExited(
-                    code: status,
-                    output: reason.isEmpty ? "Process terminated" : reason
-                ))
-            }
+            resolveOnce(result: .failure(ProcessRunnerError.processExited(
+                code: status,
+                output: reason.isEmpty ? "Process terminated" : reason
+            )))
         }
     }
 
     private func handleTimeout() {
-        resolveOnce { [weak self] cont in
-            let seconds = self?.timeoutSeconds ?? 0
-            cont.resume(throwing: ProcessRunnerError.timeout(seconds))
-        }
+        resolveOnce(result: .failure(ProcessRunnerError.timeout(timeoutSeconds)))
     }
 
-    private func resolveOnce(_ block: (CheckedContinuation<Void, Error>) -> Void) {
+    private func resolveOnce(result: Result<Void, Error>) {
         lock.lock()
         guard !continuationResolved else {
             lock.unlock()
             return
         }
         continuationResolved = true
-        isReady = true
+        if case .success = result { isReady = true }
         let cont = readyContinuation
         readyContinuation = nil
+        if cont == nil {
+            pendingResult = result
+        }
         lock.unlock()
 
         if let cont {
-            block(cont)
+            cont.resume(with: result)
         }
     }
 }
