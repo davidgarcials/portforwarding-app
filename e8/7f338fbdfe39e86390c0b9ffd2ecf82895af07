@@ -1,0 +1,40 @@
+Sources/App/PortForwardingApp.swift
+  s_b005c1b9606a2a::t_1a1a863ed66088 44
+  s_b005c1b9606a2a::t_3ea9344bcc3e3b 28-32
+  s_b005c1b9606a2a::t_be3a775a3edfa3 43,50-52
+  s_b005c1b9606a2a::t_227d37767951c3 47-49,55,66,75-76,81-103
+Sources/TestRunner/main.swift
+  s_b005c1b9606a2a::t_78561b2611feac 365,367
+  s_b005c1b9606a2a::t_8cec8a3b672e31 225-254
+  s_b005c1b9606a2a::t_c44829e72fa821 366,368-433
+  s_b005c1b9606a2a::t_4fc9797ed09fe6 434-498
+Sources/Process/ProcessRunner.swift
+  s_b005c1b9606a2a::t_59e7325db692b3 162,169,172-174,178
+  s_b005c1b9606a2a::t_e513711574445f 23
+  s_b005c1b9606a2a::t_d2ade5646fe890 82-83,85
+  s_b005c1b9606a2a::t_0dfc63362317a6 137
+  s_b005c1b9606a2a::t_c062c802dfaf00 151-154
+  s_b005c1b9606a2a::t_955fa36d3579f8 60
+  s_b005c1b9606a2a::t_fbd7c0a9b922e9 159
+Resources/Info.plist
+  s_b005c1b9606a2a::t_486a5eefeb2d74 14
+Sources/Domain/ForwardManager.swift
+  s_b005c1b9606a2a::t_20da72931e2fc5 32-35
+  s_b005c1b9606a2a::t_19749acb4c8229 36-39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "e87f338fbdfe39e86390c0b9ffd2ecf82895af07",
+  "prompts": {},
+  "sessions": {
+    "s_b005c1b9606a2a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dfb02037-6fa4-42ea-9dcc-63dff89d7484",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
