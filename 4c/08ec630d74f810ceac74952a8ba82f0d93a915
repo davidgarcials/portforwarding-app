@@ -1,0 +1,30 @@
+Sources/Domain/PortForward.swift
+  s_0a6c23d4848477::t_caaef01dbd7860 34
+Sources/Domain/KubectlResolver.swift
+  s_0a6c23d4848477::t_77e51947454631 1-56
+Sources/Process/ProcessRunner.swift
+  s_0a6c23d4848477::t_315b47a33a2dcf 28
+  s_0a6c23d4848477::t_68cd811d468619 41
+Sources/TestRunner/main.swift
+  s_0a6c23d4848477::t_58c706f55936c6 79-83
+Sources/Domain/KubectlDiscovery.swift
+  s_0a6c23d4848477::t_000068ff8f2a34 18
+  s_0a6c23d4848477::t_d73f9e3e969bff 59-60
+  s_0a6c23d4848477::t_e4f9792fda777a 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4c08ec630d74f810ceac74952a8ba82f0d93a915",
+  "prompts": {},
+  "sessions": {
+    "s_0a6c23d4848477": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "816ef43e-129f-4c98-8ff1-50a25898cb90",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
