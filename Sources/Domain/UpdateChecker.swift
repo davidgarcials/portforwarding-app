@@ -161,24 +161,21 @@ public final class UpdateChecker: ObservableObject {
 
     private func replaceAndRelaunch(with newAppPath: URL) throws {
         let currentAppPath = Bundle.main.bundlePath
-
-        let script = """
-        #!/bin/bash
-        sleep 1
-        rm -rf "\(currentAppPath)"
-        mv "\(newAppPath.path)" "\(currentAppPath)"
-        xattr -cr "\(currentAppPath)"
-        open "\(currentAppPath)"
-        rm -rf "\(newAppPath.deletingLastPathComponent().deletingLastPathComponent().path)"
-        """
-
-        let scriptPath = FileManager.default.temporaryDirectory.appendingPathComponent("pf_update.sh")
-        try script.write(to: scriptPath, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath.path)
+        let tempDir = newAppPath.deletingLastPathComponent().deletingLastPathComponent().path
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath.path]
+        process.arguments = [
+            "-c", """
+                sleep 1
+                /bin/rm -rf "$1"
+                /bin/mv "$2" "$1"
+                /usr/bin/xattr -cr "$1"
+                /usr/bin/open "$1"
+                /bin/rm -rf "$3"
+                """,
+            "--", currentAppPath, newAppPath.path, tempDir,
+        ]
         try process.run()
 
         DispatchQueue.main.async {
