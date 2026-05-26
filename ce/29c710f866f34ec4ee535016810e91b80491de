@@ -1,0 +1,20 @@
+Sources/Domain/UpdateChecker.swift
+  s_0a6c23d4848477::t_985e6c191cfef4 164,178
+  s_0a6c23d4848477::t_5a9f7da2fa467f 168-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ce29c710f866f34ec4ee535016810e91b80491de",
+  "prompts": {},
+  "sessions": {
+    "s_0a6c23d4848477": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "816ef43e-129f-4c98-8ff1-50a25898cb90",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
