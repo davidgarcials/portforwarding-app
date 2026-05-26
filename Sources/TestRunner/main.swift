@@ -76,12 +76,11 @@ print("\n=== PortForward Model Tests ===")
 test("Launch arguments") {
     let fwd = makeForward(service: "my-api", namespace: "my-namespace", localPort: 3010, remotePort: 80)
     let args = fwd.launchArguments
-    assertEqual(args[0], "-l")
-    assertEqual(args[1], "-c")
-    assert(args[2].contains("kubectl port-forward"), "should contain kubectl command")
-    assert(args[2].contains("svc/my-api"), "should contain service")
-    assert(args[2].contains("--namespace my-namespace"), "should contain namespace")
-    assert(args[2].contains("3010:80"), "should contain port mapping")
+    assertEqual(args[0], "port-forward")
+    assertEqual(args[1], "svc/my-api")
+    assertEqual(args[2], "--namespace")
+    assertEqual(args[3], "my-namespace")
+    assertEqual(args[4], "3010:80")
 }
 
 test("JSON round-trip") {

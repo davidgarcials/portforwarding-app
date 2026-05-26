@@ -25,7 +25,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
     public var onTerminatedAfterReady: ((Int32, String) -> Void)?
 
     public init(
-        executablePath: String = "/bin/zsh",
+        executablePath: String,
         arguments: [String],
         readinessMarker: String = "Forwarding from",
         timeoutSeconds: Double = 60
@@ -38,6 +38,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
 
     public convenience init(forward: PortForward, timeoutSeconds: Double = 60) {
         self.init(
+            executablePath: KubectlResolver.resolve(),
             arguments: forward.launchArguments,
             timeoutSeconds: timeoutSeconds
         )

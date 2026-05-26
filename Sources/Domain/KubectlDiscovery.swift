@@ -15,7 +15,7 @@ public struct KubeServicePort {
 public enum KubectlDiscovery {
 
     public static func fetchNamespaces() async throws -> [String] {
-        let output = try await run(["kubectl", "get", "namespaces", "-o", "'jsonpath={.items[*].metadata.name}'"])
+        let output = try await run(["get", "namespaces", "-o", "jsonpath={.items[*].metadata.name}"])
         return output
             .split(separator: " ")
             .map(String.init)
@@ -24,7 +24,7 @@ public enum KubectlDiscovery {
 
     public static func fetchServices(namespace: String) async throws -> [KubeService] {
         let output = try await run([
-            "kubectl", "get", "services", "-n", namespace,
+            "get", "services", "-n", namespace,
             "-o", "json",
         ])
 
@@ -56,8 +56,8 @@ public enum KubectlDiscovery {
 
     private static func run(_ arguments: [String]) async throws -> String {
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        proc.arguments = ["-l", "-c", arguments.joined(separator: " ")]
+        proc.executableURL = URL(fileURLWithPath: KubectlResolver.resolve())
+        proc.arguments = arguments
 
         let pipe = Pipe()
         let errPipe = Pipe()
