@@ -142,6 +142,11 @@ struct ForwardRowView: View {
                             .font(.caption2)
                             .foregroundStyle(.red)
                             .lineLimit(1)
+                    } else if state == .authenticating {
+                        Text("— Authenticating…")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .lineLimit(1)
                     }
                 }
             }
@@ -162,7 +167,7 @@ struct ForwardRowView: View {
     private var statusColor: Color {
         switch state {
         case .idle, .stopped: return .gray
-        case .starting: return .yellow
+        case .starting, .authenticating: return .yellow
         case .ready: return .green
         case .failed: return .red
         }
@@ -177,7 +182,7 @@ struct ForwardRowView: View {
                     .foregroundStyle(.green)
             }
             .buttonStyle(.borderless)
-        case .starting:
+        case .starting, .authenticating:
             ProgressView()
                 .controlSize(.small)
         case .ready:

@@ -200,6 +200,8 @@ struct ForwardSettingsRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @State private var showingError = false
+
     var body: some View {
         HStack(spacing: 12) {
             statusDot
@@ -222,7 +224,7 @@ struct ForwardSettingsRow: View {
     private var statusColor: Color {
         switch state {
         case .idle, .stopped: return .gray
-        case .starting: return .yellow
+        case .starting, .authenticating: return .yellow
         case .ready: return .green
         case .failed: return .red
         }
@@ -257,6 +259,10 @@ struct ForwardSettingsRow: View {
             Text("Connecting...")
                 .font(.caption)
                 .foregroundStyle(.orange)
+        case .authenticating:
+            Text("Authenticating…")
+                .font(.caption)
+                .foregroundStyle(.orange)
         case .ready:
             Text("Connected")
                 .font(.caption)
@@ -267,6 +273,15 @@ struct ForwardSettingsRow: View {
                 .foregroundStyle(.red)
                 .lineLimit(2)
                 .frame(maxWidth: 300, alignment: .trailing)
+                .onTapGesture { showingError = true }
+                .popover(isPresented: $showingError) {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(12)
+                        .frame(maxWidth: 400)
+                        .textSelection(.enabled)
+                }
         }
     }
 
@@ -280,7 +295,7 @@ struct ForwardSettingsRow: View {
             }
             .buttonStyle(.borderless)
             .help("Connect")
-        case .starting:
+        case .starting, .authenticating:
             ProgressView()
                 .controlSize(.small)
         case .ready:

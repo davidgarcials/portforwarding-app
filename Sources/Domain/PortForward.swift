@@ -38,6 +38,7 @@ public struct PortForward: Codable, Identifiable, Hashable {
 public enum ForwardState: Equatable {
     case idle
     case starting
+    case authenticating
     case ready
     case failed(String)
     case stopped

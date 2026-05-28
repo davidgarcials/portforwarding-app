@@ -20,10 +20,16 @@ public final class ForwardManager: ObservableObject {
     private var runners: [UUID: ProcessRunning] = [:]
     private let configStore: ConfigStore
     private let runnerFactory: ProcessRunnerFactory
+    private let credentialRefresher: CredentialRefreshing
     private let notifier: PortDropNotifying?
     private var connectAllTask: Task<Void, Never>?
     private var healthCheckTask: Task<Void, Never>?
     private let healthCheckInterval: TimeInterval
+
+    private static let credentialErrorPatterns = [
+        "getting credentials",
+        "you must be logged in",
+    ]
 
     public var allForwards: [PortForward] {
         workspaces.flatMap(\.forwards)
@@ -40,11 +46,13 @@ public final class ForwardManager: ObservableObject {
     public init(
         configStore: ConfigStore,
         runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory(),
+        credentialRefresher: CredentialRefreshing = KubectlCredentialRefresher(),
         notifier: PortDropNotifying? = nil,
         healthCheckInterval: TimeInterval = 10
     ) {
         self.configStore = configStore
         self.runnerFactory = runnerFactory
+        self.credentialRefresher = credentialRefresher
         self.notifier = notifier
         self.healthCheckInterval = healthCheckInterval
         self.workspaces = configStore.loadAllWorkspaces()
@@ -135,9 +143,28 @@ public final class ForwardManager: ObservableObject {
             return
         }
 
+        states[forward.id] = .starting
+
+        guard let error = await attemptConnect(forward) else { return }
+
+        if isCredentialError(error) {
+            states[forward.id] = .authenticating
+            guard await credentialRefresher.refresh() else {
+                states[forward.id] = .failed("Authentication failed")
+                return
+            }
+            states[forward.id] = .starting
+            if let retryError = await attemptConnect(forward) {
+                states[forward.id] = .failed(retryError.localizedDescription)
+            }
+        } else {
+            states[forward.id] = .failed(error.localizedDescription)
+        }
+    }
+
+    private func attemptConnect(_ forward: PortForward) async -> Error? {
         let runner = runnerFactory.makeRunner(for: forward)
         runners[forward.id] = runner
-        states[forward.id] = .starting
 
         runner.onTerminatedAfterReady = { [weak self] code, reason in
             Task { @MainActor [weak self] in
@@ -151,9 +178,16 @@ public final class ForwardManager: ObservableObject {
         do {
             try await runner.startAndAwaitReady()
             states[forward.id] = .ready
+            return nil
         } catch {
-            states[forward.id] = .failed(error.localizedDescription)
+            runners[forward.id] = nil
+            return error
         }
+    }
+
+    private func isCredentialError(_ error: Error) -> Bool {
+        let message = error.localizedDescription.lowercased()
+        return Self.credentialErrorPatterns.contains { message.contains($0) }
     }
 
     public func disconnect(_ forward: PortForward) {
@@ -272,7 +306,7 @@ public final class ForwardManager: ObservableObject {
                 if portOpen && runners[fwd.id] == nil {
                     states[fwd.id] = .ready
                 }
-            case .starting:
+            case .starting, .authenticating:
                 break
             }
         }
