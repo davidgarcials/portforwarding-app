@@ -1,0 +1,19 @@
+Resources/Info.plist
+  s_bbb9bcfa06f6f3::t_68b0fbf7cb8fb6 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ed11d83a98ef5ce8ddcc1e97fcae09d135ac1f0a",
+  "prompts": {},
+  "sessions": {
+    "s_bbb9bcfa06f6f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2261a5-872c-42b0-b670-af2a00f538d9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
