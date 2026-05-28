@@ -200,6 +200,8 @@ struct ForwardSettingsRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @State private var showingError = false
+
     var body: some View {
         HStack(spacing: 12) {
             statusDot
@@ -271,6 +273,15 @@ struct ForwardSettingsRow: View {
                 .foregroundStyle(.red)
                 .lineLimit(2)
                 .frame(maxWidth: 300, alignment: .trailing)
+                .onTapGesture { showingError = true }
+                .popover(isPresented: $showingError) {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(12)
+                        .frame(maxWidth: 400)
+                        .textSelection(.enabled)
+                }
         }
     }
 
