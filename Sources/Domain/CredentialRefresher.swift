@@ -12,6 +12,7 @@ public final class KubectlCredentialRefresher: CredentialRefreshing {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: kubectlPath)
         proc.arguments = ["cluster-info"]
+        proc.environment = ProcessEnvironment.resolved()
         proc.standardOutput = FileHandle.nullDevice
 
         return await withCheckedContinuation { cont in

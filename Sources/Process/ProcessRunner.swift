@@ -48,6 +48,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: executablePath)
         proc.arguments = arguments
+        proc.environment = ProcessEnvironment.resolved()
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
