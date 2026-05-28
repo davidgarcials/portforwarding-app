@@ -4,6 +4,7 @@ import PortForwardingLib
 struct UpdateBannerView: View {
     @ObservedObject var updateChecker: UpdateChecker
     var compact: Bool = false
+    var onBeforeUpdate: () -> Void = {}
 
     var body: some View {
         if let update = updateChecker.availableUpdate {
@@ -35,6 +36,7 @@ struct UpdateBannerView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     Button(action: {
+                        onBeforeUpdate()
                         Task { await updateChecker.downloadAndInstall() }
                     }) {
                         Text("Update")

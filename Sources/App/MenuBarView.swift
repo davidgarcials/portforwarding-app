@@ -10,9 +10,13 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             headerSection
             if updateChecker.availableUpdate != nil {
-                UpdateBannerView(updateChecker: updateChecker, compact: true)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
+                UpdateBannerView(
+                    updateChecker: updateChecker,
+                    compact: true,
+                    onBeforeUpdate: { manager.disconnectAll() }
+                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
             }
             Divider()
             ForEach(manager.workspaces) { workspace in

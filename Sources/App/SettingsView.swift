@@ -11,9 +11,12 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             if updateChecker.availableUpdate != nil {
-                UpdateBannerView(updateChecker: updateChecker)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
+                UpdateBannerView(
+                    updateChecker: updateChecker,
+                    onBeforeUpdate: { manager.disconnectAll() }
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
             }
             toolbar
             Divider()
