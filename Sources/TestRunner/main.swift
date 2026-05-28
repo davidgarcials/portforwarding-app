@@ -598,6 +598,198 @@ await testAsync("importForwards returns count of imported forwards") {
     assertEqual(result, 2, "should report 2 imported")
 }
 
+// MARK: - Credential Retry Tests
+
+print("\n=== Credential Retry Tests ===")
+
+final class FailingMockRunner: ProcessRunning {
+    var onTerminatedAfterReady: ((Int32, String) -> Void)?
+    let error: Error
+
+    init(error: Error) {
+        self.error = error
+    }
+
+    func startAndAwaitReady() async throws {
+        throw error
+    }
+    func stop() {}
+}
+
+final class SequentialMockRunnerFactory: ProcessRunnerFactory {
+    private var runners: [ProcessRunning]
+    private var index = 0
+
+    init(runners: [ProcessRunning]) {
+        self.runners = runners
+    }
+
+    func makeRunner(for forward: PortForward) -> ProcessRunning {
+        let runner = runners[index]
+        index += 1
+        return runner
+    }
+}
+
+final class MockCredentialRefresher: CredentialRefreshing {
+    var result = true
+    var refreshCalled = false
+
+    func refresh() async -> Bool {
+        refreshCalled = true
+        return result
+    }
+}
+
+await testAsync("Connect retries after credential error when refresh succeeds") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let credError = ProcessRunnerError.processExited(
+        code: 1,
+        output: "Unable to connect to the server: getting credentials: exec plugin error"
+    )
+    let factory = SequentialMockRunnerFactory(runners: [
+        FailingMockRunner(error: credError),
+        MockProcessRunner(),
+    ])
+    let refresher = MockCredentialRefresher()
+    refresher.result = true
+
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        credentialRefresher: refresher,
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "cred-retry", localPort: 59460)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .idle
+    }
+
+    await manager.connect(fwd)
+
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "should be ready after credential retry")
+    assert(refresher.refreshCalled, "should have called credential refresh")
+}
+
+await testAsync("Connect fails with auth message when refresh fails") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let credError = ProcessRunnerError.processExited(
+        code: 1,
+        output: "Unable to connect to the server: getting credentials: token expired"
+    )
+    let factory = SequentialMockRunnerFactory(runners: [
+        FailingMockRunner(error: credError),
+    ])
+    let refresher = MockCredentialRefresher()
+    refresher.result = false
+
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        credentialRefresher: refresher,
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "cred-fail", localPort: 59461)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .idle
+    }
+
+    await manager.connect(fwd)
+
+    let state = await MainActor.run { manager.states[fwd.id] }
+    if case .failed(let msg) = state {
+        assert(msg.contains("Authentication failed"), "should show auth failed message, got: \(msg)")
+    } else {
+        assert(false, "should be failed state, got: \(String(describing: state))")
+    }
+    assert(refresher.refreshCalled, "should have attempted refresh")
+}
+
+await testAsync("Connect does not retry on non-credential error") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let networkError = ProcessRunnerError.processExited(
+        code: 1,
+        output: "error: unable to forward port: pod not found"
+    )
+    let factory = SequentialMockRunnerFactory(runners: [
+        FailingMockRunner(error: networkError),
+    ])
+    let refresher = MockCredentialRefresher()
+
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        credentialRefresher: refresher,
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "no-retry", localPort: 59462)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .idle
+    }
+
+    await manager.connect(fwd)
+
+    let state = await MainActor.run { manager.states[fwd.id] }
+    if case .failed = state {
+        // expected
+    } else {
+        assert(false, "should be failed state, got: \(String(describing: state))")
+    }
+    assert(!refresher.refreshCalled, "should NOT have called credential refresh for non-credential error")
+}
+
+await testAsync("Connect retries on 'you must be logged in' error") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let credError = ProcessRunnerError.processExited(
+        code: 1,
+        output: "error: You must be logged in to the server (Unauthorized)"
+    )
+    let factory = SequentialMockRunnerFactory(runners: [
+        FailingMockRunner(error: credError),
+        MockProcessRunner(),
+    ])
+    let refresher = MockCredentialRefresher()
+    refresher.result = true
+
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        credentialRefresher: refresher,
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+
+    let fwd = makeForward(name: "logged-in-retry", localPort: 59463)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.states[fwd.id] = .idle
+    }
+
+    await manager.connect(fwd)
+
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "should be ready after retry on 'must be logged in' error")
+    assert(refresher.refreshCalled, "should have called credential refresh")
+}
+
 // MARK: - Results
 
 print("\n=== Results ===")

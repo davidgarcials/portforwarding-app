@@ -222,7 +222,7 @@ struct ForwardSettingsRow: View {
     private var statusColor: Color {
         switch state {
         case .idle, .stopped: return .gray
-        case .starting: return .yellow
+        case .starting, .authenticating: return .yellow
         case .ready: return .green
         case .failed: return .red
         }
@@ -257,6 +257,10 @@ struct ForwardSettingsRow: View {
             Text("Connecting...")
                 .font(.caption)
                 .foregroundStyle(.orange)
+        case .authenticating:
+            Text("Authenticating…")
+                .font(.caption)
+                .foregroundStyle(.orange)
         case .ready:
             Text("Connected")
                 .font(.caption)
@@ -280,7 +284,7 @@ struct ForwardSettingsRow: View {
             }
             .buttonStyle(.borderless)
             .help("Connect")
-        case .starting:
+        case .starting, .authenticating:
             ProgressView()
                 .controlSize(.small)
         case .ready:
