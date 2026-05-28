@@ -150,7 +150,7 @@ public final class ForwardManager: ObservableObject {
         if isCredentialError(error) {
             states[forward.id] = .authenticating
             guard await credentialRefresher.refresh() else {
-                states[forward.id] = .failed("Authentication failed")
+                states[forward.id] = .failed(error.localizedDescription)
                 return
             }
             states[forward.id] = .starting

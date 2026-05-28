@@ -709,7 +709,7 @@ await testAsync("Connect fails with auth message when refresh fails") {
 
     let state = await MainActor.run { manager.states[fwd.id] }
     if case .failed(let msg) = state {
-        assert(msg.contains("Authentication failed"), "should show auth failed message, got: \(msg)")
+        assert(msg.contains("getting credentials"), "should show original kubectl error, got: \(msg)")
     } else {
         assert(false, "should be failed state, got: \(String(describing: state))")
     }
