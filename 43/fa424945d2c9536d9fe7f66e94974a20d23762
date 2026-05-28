@@ -1,0 +1,21 @@
+Sources/Domain/KubectlResolver.swift
+  s_bbb9bcfa06f6f3::t_171a01d111b0b7 25-29,40-66,70
+Resources/Info.plist
+  s_bbb9bcfa06f6f3::t_d75d67624fd2b2 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "43fa424945d2c9536d9fe7f66e94974a20d23762",
+  "prompts": {},
+  "sessions": {
+    "s_bbb9bcfa06f6f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2261a5-872c-42b0-b670-af2a00f538d9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
