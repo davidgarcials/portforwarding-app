@@ -1,0 +1,24 @@
+Sources/App/SettingsView.swift
+  s_bbb9bcfa06f6f3::t_60824d3b72a0ff 14-19
+Sources/App/UpdateBannerView.swift
+  s_bbb9bcfa06f6f3::t_a038d8a3c0f548 39
+  s_bbb9bcfa06f6f3::t_9ec9883591297f 7
+Sources/App/MenuBarView.swift
+  s_bbb9bcfa06f6f3::t_e46ed72c7effd3 13-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "75074b7f828e97247c8f11590f550cae6fb812d7",
+  "prompts": {},
+  "sessions": {
+    "s_bbb9bcfa06f6f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c2261a5-872c-42b0-b670-af2a00f538d9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
