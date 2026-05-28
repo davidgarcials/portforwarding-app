@@ -22,6 +22,11 @@ public enum KubectlResolver {
             }
         }
 
+        if let path = resolveViaSystemPaths() {
+            cachedPath = path
+            return path
+        }
+
         if let path = resolveViaShell() {
             cachedPath = path
             return path
@@ -32,10 +37,37 @@ public enum KubectlResolver {
         return fallback
     }
 
+    private static func resolveViaSystemPaths() -> String? {
+        var dirs: [String] = []
+
+        if let data = FileManager.default.contents(atPath: "/etc/paths"),
+           let content = String(data: data, encoding: .utf8) {
+            dirs.append(contentsOf: content.components(separatedBy: .newlines))
+        }
+
+        if let entries = try? FileManager.default.contentsOfDirectory(atPath: "/etc/paths.d") {
+            for entry in entries {
+                let filePath = "/etc/paths.d/\(entry)"
+                if let data = FileManager.default.contents(atPath: filePath),
+                   let content = String(data: data, encoding: .utf8) {
+                    dirs.append(contentsOf: content.components(separatedBy: .newlines))
+                }
+            }
+        }
+
+        for dir in dirs where !dir.isEmpty {
+            let path = (dir as NSString).appendingPathComponent("kubectl")
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return path
+            }
+        }
+        return nil
+    }
+
     private static func resolveViaShell() -> String? {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        proc.arguments = ["-l", "-c", "which kubectl"]
+        proc.arguments = ["-l", "-i", "-c", "which kubectl"]
         let pipe = Pipe()
         proc.standardOutput = pipe
         proc.standardError = FileHandle.nullDevice
