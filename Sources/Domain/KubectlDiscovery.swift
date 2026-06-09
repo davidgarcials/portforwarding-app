@@ -54,10 +54,16 @@ public enum KubectlDiscovery {
         .sorted { $0.name < $1.name }
     }
 
-    private static func run(_ arguments: [String]) async throws -> String {
+    public static func makeProcess(_ arguments: [String]) -> Process {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: KubectlResolver.resolve())
         proc.arguments = arguments
+        proc.environment = ProcessEnvironment.resolved()
+        return proc
+    }
+
+    private static func run(_ arguments: [String]) async throws -> String {
+        let proc = makeProcess(arguments)
 
         let pipe = Pipe()
         let errPipe = Pipe()

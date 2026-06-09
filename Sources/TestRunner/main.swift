@@ -83,6 +83,14 @@ test("Launch arguments") {
     assertEqual(args[4], "3010:80")
 }
 
+test("KubectlDiscovery applies resolved environment so exec credential plugins are found") {
+    let proc = KubectlDiscovery.makeProcess(["get", "namespaces"])
+    let path = proc.environment?["PATH"]
+    assert(path != nil, "kubectl discovery process must carry a PATH so exec plugins like aws-vault are found")
+    assert(!(path ?? "").isEmpty, "resolved PATH must not be empty")
+    assertEqual(proc.arguments ?? [], ["get", "namespaces"], "arguments should pass through unchanged")
+}
+
 test("JSON round-trip") {
     let original = makeForward()
     let data = try JSONEncoder().encode(original)
