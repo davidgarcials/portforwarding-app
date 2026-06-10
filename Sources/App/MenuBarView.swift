@@ -5,6 +5,7 @@ struct MenuBarView: View {
     @ObservedObject var manager: ForwardManager
     @ObservedObject var updateChecker: UpdateChecker
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -30,8 +31,6 @@ struct MenuBarView: View {
             }
             Divider()
             actionButtons
-            Divider()
-            bottomSection
         }
         .frame(width: 360)
     }
@@ -42,13 +41,7 @@ struct MenuBarView: View {
                 .font(.headline)
             Spacer()
             connectedCount
-            Button(action: {
-                NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: "settings")
-            }) {
-                Image(systemName: "gear")
-            }
-            .buttonStyle(.borderless)
+            appMenu
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -60,6 +53,34 @@ struct MenuBarView: View {
         return Text("\(count)/\(total)")
             .font(.caption)
             .foregroundStyle(.secondary)
+    }
+
+    private var appMenu: some View {
+        Menu {
+            Section("Resources") {
+                Button("View on GitHub") { openURL(updateChecker.repoURL) }
+                Button("Release Notes") { openURL(updateChecker.releasesURL) }
+            }
+            Divider()
+            Button("Check for Updates…") {
+                Task { await updateChecker.checkForUpdate() }
+            }
+            Divider()
+            Button("Settings…") {
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "settings")
+            }
+            Divider()
+            Button("Quit Port Forwarding") {
+                manager.disconnectAll()
+                NSApplication.shared.terminate(nil)
+            }
+        } label: {
+            Image(systemName: "gear")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.borderless)
+        .menuIndicator(.hidden)
     }
 
     private func workspaceSection(_ workspace: Workspace) -> some View {
@@ -107,14 +128,6 @@ struct MenuBarView: View {
         .padding(.vertical, 8)
     }
 
-    private var bottomSection: some View {
-        Button("Quit") {
-            manager.disconnectAll()
-            NSApplication.shared.terminate(nil)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
 }
 
 struct ForwardRowView: View {
