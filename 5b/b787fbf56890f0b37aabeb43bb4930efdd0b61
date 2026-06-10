@@ -1,0 +1,21 @@
+Sources/TestRunner/main.swift
+  s_0988ea6d6f5e94::t_1ae3260fad9855 801-814
+Sources/Domain/UpdateChecker.swift
+  s_0988ea6d6f5e94::t_2280454d0de96c 31-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5bb787fbf56890f0b37aabeb43bb4930efdd0b61",
+  "prompts": {},
+  "sessions": {
+    "s_0988ea6d6f5e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a9aa89a-5d30-4626-aa45-f93077073f24",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
