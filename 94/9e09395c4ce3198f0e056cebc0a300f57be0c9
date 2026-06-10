@@ -1,0 +1,22 @@
+plans/20260610-header-app-menu.md
+  s_0988ea6d6f5e94::t_719352f9862a08 7-63
+  s_0988ea6d6f5e94::t_b72725f8bbf706 64-197
+  s_0988ea6d6f5e94::t_c7677a3c0ed312 1,3,6
+  s_0988ea6d6f5e94::t_25e491b7806a89 2,4-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "949e09395c4ce3198f0e056cebc0a300f57be0c9",
+  "prompts": {},
+  "sessions": {
+    "s_0988ea6d6f5e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a9aa89a-5d30-4626-aa45-f93077073f24",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
