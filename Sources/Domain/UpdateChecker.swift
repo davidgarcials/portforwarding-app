@@ -28,6 +28,14 @@ public final class UpdateChecker: ObservableObject {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
 
+    public var repoURL: URL {
+        URL(string: "https://github.com/\(repo)")!
+    }
+
+    public var releasesURL: URL {
+        repoURL.appendingPathComponent("releases")
+    }
+
     public init(repo: String = "davidgarcials/portforwarding-app", assetName: String = "PortForwarding.app.zip") {
         self.repo = repo
         self.assetName = assetName

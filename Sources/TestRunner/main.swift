@@ -798,6 +798,20 @@ await testAsync("Connect retries on 'you must be logged in' error") {
     assert(refresher.refreshCalled, "should have called credential refresh")
 }
 
+// MARK: - UpdateChecker URL Tests
+
+print("\n=== UpdateChecker URL Tests ===")
+
+await testAsync("repoURL builds the GitHub repo URL from the slug") {
+    let absolute = await MainActor.run { UpdateChecker(repo: "owner/name").repoURL.absoluteString }
+    assertEqual(absolute, "https://github.com/owner/name")
+}
+
+await testAsync("releasesURL points to the GitHub releases page") {
+    let absolute = await MainActor.run { UpdateChecker(repo: "owner/name").releasesURL.absoluteString }
+    assertEqual(absolute, "https://github.com/owner/name/releases")
+}
+
 // MARK: - Results
 
 print("\n=== Results ===")
