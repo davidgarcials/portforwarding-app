@@ -1,0 +1,21 @@
+Sources/App/MenuBarView.swift
+  s_0988ea6d6f5e94::t_4afeafeafd8d19 44
+  s_0988ea6d6f5e94::t_9d5b6ddec396d4 8
+  s_0988ea6d6f5e94::t_1dd81d62f5cd0b 58-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "3b17f6a88ac408387937ac3c8faacc38a684dbfc",
+  "prompts": {},
+  "sessions": {
+    "s_0988ea6d6f5e94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a9aa89a-5d30-4626-aa45-f93077073f24",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
