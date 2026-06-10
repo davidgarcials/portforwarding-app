@@ -175,15 +175,15 @@ change is integrated into the existing `MenuBarExtra` / `MenuBarView`.
 
 ## Acceptance Criteria
 
-- [ ] Clicking the header gear opens a menu (no longer opens Settings directly).
-- [ ] Menu shows, grouped in sections: **View on GitHub**, **Release Notes**,
+- [x] Clicking the header gear opens a menu (no longer opens Settings directly).
+- [x] Menu shows, grouped in sections: **View on GitHub**, **Release Notes**,
       **Check for Updates…**, **Settings…**, **Quit Port Forwarding**.
-- [ ] View on GitHub → `https://github.com/davidgarcials/portforwarding-app`; Release
+- [x] View on GitHub → `https://github.com/davidgarcials/portforwarding-app`; Release
       Notes → `…/releases`.
-- [ ] Check for Updates… triggers `checkForUpdate()` (banner appears if an update exists).
-- [ ] Settings… opens the Settings window; Quit disconnects all and terminates.
-- [ ] Standalone bottom Quit button removed.
-- [ ] `make test` green (new `repoURL`/`releasesURL` tests pass).
+- [x] Check for Updates… triggers `checkForUpdate()` (banner appears if an update exists).
+- [x] Settings… opens the Settings window; Quit disconnects all and terminates.
+- [x] Standalone bottom Quit button removed.
+- [x] `make test` green (new `repoURL`/`releasesURL` tests pass).
 
 ## Out of Scope (YAGNI)
 
