@@ -231,18 +231,23 @@ public final class ForwardManager: ObservableObject {
         guard reconnectTasks[forward.id] == nil else { return }  // dedupe simultaneous drop signals
         states[forward.id] = .starting                           // reflect "reconnecting"; health check skips it
         reconnectTasks[forward.id] = Task {
-            defer { reconnectTasks[forward.id] = nil }
-            for _ in 1...maxReconnectAttempts {
-                if Task.isCancelled { return }
-                try? await Task.sleep(nanoseconds: UInt64(reconnectDelay * 1_000_000_000))
-                if Task.isCancelled { return }
-                await connect(forward)  // waits for the user to authenticate inside connect()
+            // Runs on every exit. On cancellation (manual disconnect or auto-reconnect
+            // turned off) tear down whatever this attempt produced — wherever we stopped,
+            // including mid-sleep — so the forward never gets stuck showing "Connecting…".
+            defer {
+                reconnectTasks[forward.id] = nil
                 if Task.isCancelled {
                     runners[forward.id]?.stop()
                     runners[forward.id] = nil
                     states[forward.id] = .stopped
-                    return
                 }
+            }
+            for _ in 0..<maxReconnectAttempts {
+                if Task.isCancelled { return }
+                try? await Task.sleep(nanoseconds: UInt64(reconnectDelay * 1_000_000_000))
+                if Task.isCancelled { return }
+                await connect(forward)  // waits for the user to authenticate inside connect()
+                if Task.isCancelled { return }
                 if states[forward.id] == .ready { return }
             }
             states[forward.id] = .failed("Reconnect failed after \(maxReconnectAttempts) attempts")

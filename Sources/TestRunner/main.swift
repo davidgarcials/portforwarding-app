@@ -124,6 +124,7 @@ test("AppConfig save and load round-trip") {
     assertEqual(loaded.version, 1)
     assertEqual(loaded.workspacePaths.count, 2)
     assertEqual(loaded.workspacePaths[0], "/tmp/ws1")
+    assertEqual(loaded.autoReconnect, false)
 }
 
 test("loadAppConfigOrDefault returns empty when no file") {
@@ -625,6 +626,35 @@ await testAsync("Manual disconnect during reconnect ends stopped") {
     try await Task.sleep(nanoseconds: 200_000_000)
     let state = await MainActor.run { manager.states[fwd.id] }
     assertEqual(state, .stopped, "manual disconnect during reconnect should win -> stopped")
+}
+
+await testAsync("autoReconnect toggled OFF during reconnect stops the forward") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 1.0  // wide window: the reconnect task is still sleeping when we toggle off
+    )
+    let fwd = makeForward(name: "ar-toggle-off", localPort: 59475)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    let firstRunner = factory.lastRunner!
+    await MainActor.run { firstRunner.onTerminatedAfterReady?(1, "boom") }  // schedule reconnect (sleeps 1s)
+    try await Task.sleep(nanoseconds: 100_000_000)                          // reconnect task now mid-sleep
+    await MainActor.run { manager.autoReconnect = false }                   // cancelAllReconnects
+    try await Task.sleep(nanoseconds: 200_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .stopped, "toggling auto-reconnect off mid-reconnect should stop the forward, not leave it Connecting…")
 }
 
 // MARK: - Forward Status Property Tests

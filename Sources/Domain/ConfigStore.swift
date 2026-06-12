@@ -15,12 +15,14 @@ public struct AppConfig: Codable {
         case version, workspacePaths, autoReconnect
     }
 
-    // Tolerant decode: existing config.json files predate `autoReconnect`. A missing
-    // key decodes to false rather than failing the whole load and losing workspacePaths.
+    // Only `autoReconnect` is decoded tolerantly: existing config.json files predate it,
+    // and a missing key must default to false rather than failing the whole load (which
+    // would lose workspacePaths). `workspacePaths` stays required so genuine corruption
+    // still surfaces instead of being silently masked into an empty list.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
-        workspacePaths = try container.decodeIfPresent([String].self, forKey: .workspacePaths) ?? []
+        workspacePaths = try container.decode([String].self, forKey: .workspacePaths)
         autoReconnect = try container.decodeIfPresent(Bool.self, forKey: .autoReconnect) ?? false
     }
 }
