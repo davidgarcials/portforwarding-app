@@ -1,0 +1,25 @@
+Resources/Info.plist
+  s_deabe9819415f9::t_758275aadfcc3f 14
+README.md
+  s_deabe9819415f9::t_7a15e96b6603c3 76
+  s_deabe9819415f9::t_9284d25ad4a609 131-132
+SPEC.md
+  s_deabe9819415f9::t_30734b5ec41851 62
+  s_deabe9819415f9::t_5582ccfa28b907 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "09b801d5b88536db3baf3e649a819521f5d7b3bb",
+  "prompts": {},
+  "sessions": {
+    "s_deabe9819415f9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a34dd88f-f25e-45c7-b118-d7f30c60d714",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
