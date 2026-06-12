@@ -1,0 +1,24 @@
+Sources/TestRunner/main.swift
+  s_deabe9819415f9::t_b1c1839b08f0c6 631-659
+  s_deabe9819415f9::t_cfd2195e475135 127
+Sources/Domain/ConfigStore.swift
+  s_deabe9819415f9::t_4d690a7cd0fb5a 18-21,25
+Sources/Domain/ForwardManager.swift
+  s_deabe9819415f9::t_a90a284a4d6545 234-238,244-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "9f06ebf991b4d0a8262957bec294103380dc7ad7",
+  "prompts": {},
+  "sessions": {
+    "s_deabe9819415f9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a34dd88f-f25e-45c7-b118-d7f30c60d714",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
