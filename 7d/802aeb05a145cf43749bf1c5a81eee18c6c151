@@ -1,0 +1,19 @@
+reviews/review-2026-06-12-auto-reconnect.md
+  s_deabe9819415f9::t_4ea3a5d7a0a87a 1-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "7d802aeb05a145cf43749bf1c5a81eee18c6c151",
+  "prompts": {},
+  "sessions": {
+    "s_deabe9819415f9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a34dd88f-f25e-45c7-b118-d7f30c60d714",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
