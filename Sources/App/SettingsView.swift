@@ -20,6 +20,8 @@ struct SettingsView: View {
             }
             toolbar
             Divider()
+            generalSettings
+            Divider()
             workspaceList
             Divider()
             HStack {
@@ -47,6 +49,17 @@ struct SettingsView: View {
         .alert(item: $importAlert) { alert in
             Alert(title: Text(alert.title), message: Text(alert.message))
         }
+    }
+
+    private var generalSettings: some View {
+        HStack {
+            Toggle("Automatically reconnect dropped forwards", isOn: $manager.autoReconnect)
+                .toggleStyle(.checkbox)
+                .help("When a connected forward drops, retry it automatically (waits for re-authentication).")
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     private var toolbar: some View {
