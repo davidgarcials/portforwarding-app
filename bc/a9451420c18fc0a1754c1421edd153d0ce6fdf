@@ -1,0 +1,21 @@
+Sources/TestRunner/main.swift
+  s_deabe9819415f9::t_9d011d2a546794 157-180
+Sources/Domain/ConfigStore.swift
+  s_deabe9819415f9::t_7ffcb88b3fd390 4,6,8,11-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "bca9451420c18fc0a1754c1421edd153d0ce6fdf",
+  "prompts": {},
+  "sessions": {
+    "s_deabe9819415f9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a34dd88f-f25e-45c7-b118-d7f30c60d714",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
