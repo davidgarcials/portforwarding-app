@@ -35,6 +35,7 @@ Managing multiple `kubectl port-forward` connections manually is tedious: each r
 - **Failure behavior:** log the failure, move to the next forward (don't stall the queue)
 - **Port conflict detection:** prevents starting two forwards on the same local port
 - **Stop:** `Process.terminate()` (SIGTERM)
+- **Auto-reconnect (opt-in, default off):** when enabled via the Settings toggle, a forward that drops *after* becoming ready (process death or health-check port loss) is retried automatically — up to 5 attempts, 3s apart — instead of going straight to `.failed`. Each attempt reuses the normal connect path, so it waits for re-authentication (credentials/SSO) when needed and does not consume a retry while waiting. Drop notifications are silenced during retries; if all attempts fail the forward goes to `.failed` and notifies. A manual disconnect (or toggling the setting off) cancels an in-flight reconnect. The flag persists in `config.json` as `autoReconnect`.
 
 ### Startup & Health
 - **Startup detection:** TCP probe on configured local ports to detect already-running forwards
@@ -58,6 +59,7 @@ struct PortForward: Codable, Identifiable, Hashable {
 struct AppConfig: Codable {
     var version: Int = 1
     var workspacePaths: [String]
+    var autoReconnect: Bool = false   // tolerant decode: missing key in legacy config → false
 }
 
 struct WorkspaceConfig: Codable {
@@ -119,7 +121,6 @@ Forwards are launched via login shell to inherit the user's PATH and kubeconfig:
 
 ## Explicitly Out of Scope (YAGNI)
 - Launch at login (trivial to add later via SMAppService)
-- Auto-reconnect on tunnel drop
 - Export/import config (it's a JSON file per workspace)
 - Notifications (status dots are sufficient)
 - Dark/light theme toggle (SwiftUI respects system appearance)

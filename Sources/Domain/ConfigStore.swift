@@ -1,12 +1,29 @@
 import Foundation
 
 public struct AppConfig: Codable {
-    public var version: Int = 1
+    public var version: Int
     public var workspacePaths: [String]
+    public var autoReconnect: Bool
 
-    public init(version: Int = 1, workspacePaths: [String] = []) {
+    public init(version: Int = 1, workspacePaths: [String] = [], autoReconnect: Bool = false) {
         self.version = version
         self.workspacePaths = workspacePaths
+        self.autoReconnect = autoReconnect
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case version, workspacePaths, autoReconnect
+    }
+
+    // Only `autoReconnect` is decoded tolerantly: existing config.json files predate it,
+    // and a missing key must default to false rather than failing the whole load (which
+    // would lose workspacePaths). `workspacePaths` stays required so genuine corruption
+    // still surfaces instead of being silently masked into an empty list.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        workspacePaths = try container.decode([String].self, forKey: .workspacePaths)
+        autoReconnect = try container.decodeIfPresent(Bool.self, forKey: .autoReconnect) ?? false
     }
 }
 

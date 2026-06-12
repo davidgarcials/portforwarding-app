@@ -73,6 +73,7 @@ Add new forwards by browsing namespaces and services directly from your cluster 
 - **Startup detection** checks which ports are already listening and initializes state accordingly
 - **Health monitoring** polls ports every 10 seconds to detect dropped connections and external changes
 - **Process death detection** updates the UI immediately when a kubectl process exits unexpectedly
+- **Auto-reconnect (opt-in, off by default)** — when enabled in Settings, a forward that drops after being connected is retried automatically (bounded retries, waits for re-authentication)
 
 ## Requirements
 
@@ -126,6 +127,8 @@ Workspace paths are stored in:
 ```
 ~/Library/Application Support/PortForwardingApp/config.json
 ```
+
+This file also holds the `autoReconnect` flag (off by default), toggled from the Settings window.
 
 ### Per-workspace config
 

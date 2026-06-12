@@ -124,6 +124,7 @@ test("AppConfig save and load round-trip") {
     assertEqual(loaded.version, 1)
     assertEqual(loaded.workspacePaths.count, 2)
     assertEqual(loaded.workspacePaths[0], "/tmp/ws1")
+    assertEqual(loaded.autoReconnect, false)
 }
 
 test("loadAppConfigOrDefault returns empty when no file") {
@@ -152,6 +153,30 @@ test("AppConfig save creates intermediate directories") {
     try store.saveAppConfig(AppConfig(workspacePaths: ["/tmp/ws"]))
     let loaded = try store.loadAppConfig()
     assertEqual(loaded.workspacePaths.count, 1)
+}
+
+// MARK: - AppConfig autoReconnect Tests
+
+print("\n=== AppConfig autoReconnect Tests ===")
+
+test("autoReconnect defaults to false") {
+    assertEqual(AppConfig().autoReconnect, false)
+}
+
+test("autoReconnect round-trips through save/load") {
+    let dir = try makeTempDir()
+    let store = ConfigStore(directory: dir)
+    try store.saveAppConfig(AppConfig(workspacePaths: ["/tmp/ws"], autoReconnect: true))
+    let loaded = try store.loadAppConfig()
+    assertEqual(loaded.autoReconnect, true)
+    assertEqual(loaded.workspacePaths.count, 1)
+}
+
+test("legacy config without autoReconnect decodes to false and keeps workspacePaths") {
+    let legacy = #"{"version":1,"workspacePaths":["/tmp/ws1","/tmp/ws2"]}"#
+    let cfg = try JSONDecoder().decode(AppConfig.self, from: Data(legacy.utf8))
+    assertEqual(cfg.autoReconnect, false)
+    assertEqual(cfg.workspacePaths.count, 2)
 }
 
 // MARK: - PortChecker Tests
@@ -275,9 +300,11 @@ final class MockNotifier: PortDropNotifying {
 
 final class MockRunnerFactory: ProcessRunnerFactory {
     var lastRunner: MockProcessRunner?
+    var madeCount = 0
     func makeRunner(for forward: PortForward) -> ProcessRunning {
         let runner = MockProcessRunner()
         lastRunner = runner
+        madeCount += 1
         return runner
     }
 }
@@ -292,6 +319,20 @@ final class MockProcessRunner: ProcessRunning {
     }
     func stop() {
         stopped = true
+    }
+}
+
+// Suspends startAndAwaitReady until stop() simulates kubectl termination.
+final class BlockingMockRunner: ProcessRunning {
+    var onTerminatedAfterReady: ((Int32, String) -> Void)?
+    private var continuation: CheckedContinuation<Void, Error>?
+
+    func startAndAwaitReady() async throws {
+        try await withCheckedThrowingContinuation { self.continuation = $0 }
+    }
+    func stop() {
+        continuation?.resume(throwing: ProcessRunnerError.processExited(code: 15, output: "terminated"))
+        continuation = nil
     }
 }
 
@@ -367,6 +408,253 @@ await testAsync("Reconnect by forwardId calls connect") {
     try await Task.sleep(nanoseconds: 200_000_000)
     let state = await MainActor.run { manager.states[fwd.id] }
     assertEqual(state, .ready, "should be ready after reconnect")
+}
+
+// MARK: - ForwardManager autoReconnect Tests
+
+print("\n=== ForwardManager autoReconnect Tests ===")
+
+await testAsync("autoReconnect defaults to false for a fresh manager") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 2,
+        reconnectDelay: 0.01
+    )
+    let value = await MainActor.run { manager.autoReconnect }
+    assert(!value, "autoReconnect should default to false")
+}
+
+await testAsync("autoReconnect initializes from config") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    try store.saveAppConfig(AppConfig(workspacePaths: [], autoReconnect: true))
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+    let value = await MainActor.run { manager.autoReconnect }
+    assert(value, "autoReconnect should initialize true from config")
+}
+
+await testAsync("Setting autoReconnect persists to config.json") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+    await MainActor.run { manager.autoReconnect = true }
+    let reloaded = store.loadAppConfigOrDefault()
+    assert(reloaded.autoReconnect, "toggling autoReconnect should persist to config.json")
+}
+
+// MARK: - Auto-Reconnect Behavior Tests
+
+print("\n=== Auto-Reconnect Behavior Tests ===")
+
+await testAsync("autoReconnect ON: drop triggers successful reconnect, no notification") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-ok", localPort: 59470)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    let firstRunner = factory.lastRunner!
+    await MainActor.run { firstRunner.onTerminatedAfterReady?(1, "boom") }
+    try await Task.sleep(nanoseconds: 300_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "should auto-reconnect to ready")
+    assertEqual(notifier.droppedForwards.count, 0, "no notification while auto-reconnecting")
+}
+
+await testAsync("autoReconnect ON: duplicate drop signals start only one reconnect") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: nil,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 0.05
+    )
+    let fwd = makeForward(name: "ar-dedup", localPort: 59474)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)                       // makeRunner #1
+    let firstRunner = factory.lastRunner!
+    await MainActor.run {
+        firstRunner.onTerminatedAfterReady?(1, "boom")
+        firstRunner.onTerminatedAfterReady?(1, "boom-again")
+    }
+    try await Task.sleep(nanoseconds: 300_000_000)
+    let count = await MainActor.run { factory.madeCount }
+    assertEqual(count, 2, "one initial + one reconnect runner (duplicate drop deduped)")
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "should be ready after a single reconnect")
+}
+
+await testAsync("autoReconnect ON: exhausts attempts then fails and notifies once") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let netErr = ProcessRunnerError.processExited(code: 1, output: "pod not found")
+    let initial = MockProcessRunner()
+    let factory = SequentialMockRunnerFactory(runners: [
+        initial,
+        FailingMockRunner(error: netErr),
+        FailingMockRunner(error: netErr),
+    ])
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 2,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-fail", localPort: 59471)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    await MainActor.run { initial.onTerminatedAfterReady?(1, "boom") }
+    try await Task.sleep(nanoseconds: 400_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    if case .failed(let msg) = state {
+        assert(msg.contains("Reconnect failed after 2 attempts"), "got: \(msg)")
+    } else {
+        assert(false, "expected failed, got: \(String(describing: state))")
+    }
+    assertEqual(notifier.droppedForwards.count, 1, "should notify once on give-up")
+}
+
+await testAsync("autoReconnect ON: reconnect succeeds after credential refresh") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let credErr = ProcessRunnerError.processExited(code: 1, output: "getting credentials: exec plugin error")
+    let initial = MockProcessRunner()
+    let factory = SequentialMockRunnerFactory(runners: [
+        initial,
+        FailingMockRunner(error: credErr),
+        MockProcessRunner(),
+    ])
+    let refresher = MockCredentialRefresher()
+    refresher.result = true
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        credentialRefresher: refresher,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-cred", localPort: 59472)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    await MainActor.run { initial.onTerminatedAfterReady?(1, "boom") }
+    try await Task.sleep(nanoseconds: 300_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "reconnect should authenticate then succeed")
+    assert(refresher.refreshCalled, "should refresh credentials during reconnect")
+    assertEqual(notifier.droppedForwards.count, 0, "no notification on successful reconnect")
+}
+
+await testAsync("Manual disconnect during reconnect ends stopped") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let initial = MockProcessRunner()
+    let blocking = BlockingMockRunner()
+    let factory = SequentialMockRunnerFactory(runners: [
+        initial,
+        blocking,
+        MockProcessRunner(),  // would be used by a 2nd attempt if cancellation failed
+    ])
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 2,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-cancel", localPort: 59473)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)                                  // runner[0] -> ready
+    await MainActor.run { initial.onTerminatedAfterReady?(1, "boom") }  // schedule reconnect
+    try await Task.sleep(nanoseconds: 100_000_000)              // reconnect now blocked inside connect()
+    await MainActor.run { manager.disconnect(fwd) }            // cancels task + stop() unblocks runner
+    try await Task.sleep(nanoseconds: 200_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .stopped, "manual disconnect during reconnect should win -> stopped")
+}
+
+await testAsync("autoReconnect toggled OFF during reconnect stops the forward") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 1.0  // wide window: the reconnect task is still sleeping when we toggle off
+    )
+    let fwd = makeForward(name: "ar-toggle-off", localPort: 59475)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    let firstRunner = factory.lastRunner!
+    await MainActor.run { firstRunner.onTerminatedAfterReady?(1, "boom") }  // schedule reconnect (sleeps 1s)
+    try await Task.sleep(nanoseconds: 100_000_000)                          // reconnect task now mid-sleep
+    await MainActor.run { manager.autoReconnect = false }                   // cancelAllReconnects
+    try await Task.sleep(nanoseconds: 200_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .stopped, "toggling auto-reconnect off mid-reconnect should stop the forward, not leave it Connecting…")
 }
 
 // MARK: - Forward Status Property Tests

@@ -16,6 +16,12 @@ public final class ForwardManager: ObservableObject {
     @Published public var workspaces: [Workspace] = []
     @Published public var states: [UUID: ForwardState] = [:]
     @Published public var isConnectingAll = false
+    @Published public var autoReconnect: Bool {
+        didSet {
+            saveAppConfig()
+            if !autoReconnect { cancelAllReconnects() }
+        }
+    }
 
     private var runners: [UUID: ProcessRunning] = [:]
     private let configStore: ConfigStore
@@ -25,6 +31,9 @@ public final class ForwardManager: ObservableObject {
     private var connectAllTask: Task<Void, Never>?
     private var healthCheckTask: Task<Void, Never>?
     private let healthCheckInterval: TimeInterval
+    private let maxReconnectAttempts: Int
+    private let reconnectDelay: TimeInterval
+    private var reconnectTasks: [UUID: Task<Void, Never>] = [:]
 
     private static let credentialErrorPatterns = [
         "getting credentials",
@@ -48,13 +57,18 @@ public final class ForwardManager: ObservableObject {
         runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory(),
         credentialRefresher: CredentialRefreshing = KubectlCredentialRefresher(),
         notifier: PortDropNotifying? = nil,
-        healthCheckInterval: TimeInterval = 10
+        healthCheckInterval: TimeInterval = 10,
+        maxReconnectAttempts: Int = 5,
+        reconnectDelay: TimeInterval = 3
     ) {
         self.configStore = configStore
         self.runnerFactory = runnerFactory
         self.credentialRefresher = credentialRefresher
         self.notifier = notifier
         self.healthCheckInterval = healthCheckInterval
+        self.maxReconnectAttempts = maxReconnectAttempts
+        self.reconnectDelay = reconnectDelay
+        self.autoReconnect = configStore.loadAppConfigOrDefault().autoReconnect
         self.workspaces = configStore.loadAllWorkspaces()
         for fwd in allForwards {
             states[fwd.id] = .idle
@@ -168,10 +182,7 @@ public final class ForwardManager: ObservableObject {
 
         runner.onTerminatedAfterReady = { [weak self] code, reason in
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.runners[forward.id] = nil
-                self.states[forward.id] = .failed("Disconnected (exit \(code)): \(reason)")
-                self.notifier?.sendPortDropped(forward: forward)
+                self?.handleDrop(forward, reason: "Disconnected (exit \(code)): \(reason)")
             }
         }
 
@@ -191,6 +202,8 @@ public final class ForwardManager: ObservableObject {
     }
 
     public func disconnect(_ forward: PortForward) {
+        reconnectTasks[forward.id]?.cancel()
+        reconnectTasks[forward.id] = nil
         runners[forward.id]?.stop()
         runners[forward.id] = nil
         states[forward.id] = .stopped
@@ -199,6 +212,47 @@ public final class ForwardManager: ObservableObject {
     public func reconnect(forwardId: UUID) {
         guard let forward = allForwards.first(where: { $0.id == forwardId }) else { return }
         Task { await connect(forward) }
+    }
+
+    // MARK: - Drop handling / auto-reconnect
+
+    private func handleDrop(_ forward: PortForward, reason: String) {
+        runners[forward.id]?.stop()
+        runners[forward.id] = nil
+        guard autoReconnect else {
+            states[forward.id] = .failed(reason)
+            notifier?.sendPortDropped(forward: forward)
+            return
+        }
+        startReconnect(forward)
+    }
+
+    private func startReconnect(_ forward: PortForward) {
+        guard reconnectTasks[forward.id] == nil else { return }  // dedupe simultaneous drop signals
+        states[forward.id] = .starting                           // reflect "reconnecting"; health check skips it
+        reconnectTasks[forward.id] = Task {
+            // Runs on every exit. On cancellation (manual disconnect or auto-reconnect
+            // turned off) tear down whatever this attempt produced — wherever we stopped,
+            // including mid-sleep — so the forward never gets stuck showing "Connecting…".
+            defer {
+                reconnectTasks[forward.id] = nil
+                if Task.isCancelled {
+                    runners[forward.id]?.stop()
+                    runners[forward.id] = nil
+                    states[forward.id] = .stopped
+                }
+            }
+            for _ in 0..<maxReconnectAttempts {
+                if Task.isCancelled { return }
+                try? await Task.sleep(nanoseconds: UInt64(reconnectDelay * 1_000_000_000))
+                if Task.isCancelled { return }
+                await connect(forward)  // waits for the user to authenticate inside connect()
+                if Task.isCancelled { return }
+                if states[forward.id] == .ready { return }
+            }
+            states[forward.id] = .failed("Reconnect failed after \(maxReconnectAttempts) attempts")
+            notifier?.sendPortDropped(forward: forward)
+        }
     }
 
     public func disconnectAll() {
@@ -257,8 +311,12 @@ public final class ForwardManager: ObservableObject {
     // MARK: - Persistence
 
     private func saveAppConfig() {
-        let config = AppConfig(workspacePaths: workspaces.map(\.path))
+        let config = AppConfig(workspacePaths: workspaces.map(\.path), autoReconnect: autoReconnect)
         try? configStore.saveAppConfig(config)
+    }
+
+    private func cancelAllReconnects() {
+        for (_, task) in reconnectTasks { task.cancel() }
     }
 
     private func saveWorkspaceConfig(_ workspace: Workspace) {
@@ -297,10 +355,7 @@ public final class ForwardManager: ObservableObject {
             switch current {
             case .ready:
                 if !portOpen {
-                    runners[fwd.id]?.stop()
-                    runners[fwd.id] = nil
-                    states[fwd.id] = .failed("Connection lost")
-                    notifier?.sendPortDropped(forward: fwd)
+                    handleDrop(fwd, reason: "Connection lost")
                 }
             case .idle, .stopped, .failed:
                 if portOpen && runners[fwd.id] == nil {
