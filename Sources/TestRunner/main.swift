@@ -321,6 +321,20 @@ final class MockProcessRunner: ProcessRunning {
     }
 }
 
+// Suspends startAndAwaitReady until stop() simulates kubectl termination.
+final class BlockingMockRunner: ProcessRunning {
+    var onTerminatedAfterReady: ((Int32, String) -> Void)?
+    private var continuation: CheckedContinuation<Void, Error>?
+
+    func startAndAwaitReady() async throws {
+        try await withCheckedThrowingContinuation { self.continuation = $0 }
+    }
+    func stop() {
+        continuation?.resume(throwing: ProcessRunnerError.processExited(code: 15, output: "terminated"))
+        continuation = nil
+    }
+}
+
 await testAsync("Notifies on ready-to-failed transition via health check") {
     let tmpDir = try makeTempDir()
     let store = ConfigStore(directory: tmpDir)
@@ -577,6 +591,40 @@ await testAsync("autoReconnect ON: reconnect succeeds after credential refresh")
     assertEqual(state, .ready, "reconnect should authenticate then succeed")
     assert(refresher.refreshCalled, "should refresh credentials during reconnect")
     assertEqual(notifier.droppedForwards.count, 0, "no notification on successful reconnect")
+}
+
+await testAsync("Manual disconnect during reconnect ends stopped") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let initial = MockProcessRunner()
+    let blocking = BlockingMockRunner()
+    let factory = SequentialMockRunnerFactory(runners: [
+        initial,
+        blocking,
+        MockProcessRunner(),  // would be used by a 2nd attempt if cancellation failed
+    ])
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 2,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-cancel", localPort: 59473)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)                                  // runner[0] -> ready
+    await MainActor.run { initial.onTerminatedAfterReady?(1, "boom") }  // schedule reconnect
+    try await Task.sleep(nanoseconds: 100_000_000)              // reconnect now blocked inside connect()
+    await MainActor.run { manager.disconnect(fwd) }            // cancels task + stop() unblocks runner
+    try await Task.sleep(nanoseconds: 200_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .stopped, "manual disconnect during reconnect should win -> stopped")
 }
 
 // MARK: - Forward Status Property Tests

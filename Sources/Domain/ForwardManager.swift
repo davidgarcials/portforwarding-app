@@ -202,6 +202,8 @@ public final class ForwardManager: ObservableObject {
     }
 
     public func disconnect(_ forward: PortForward) {
+        reconnectTasks[forward.id]?.cancel()
+        reconnectTasks[forward.id] = nil
         runners[forward.id]?.stop()
         runners[forward.id] = nil
         states[forward.id] = .stopped
