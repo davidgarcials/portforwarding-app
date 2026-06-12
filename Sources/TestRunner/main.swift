@@ -154,6 +154,30 @@ test("AppConfig save creates intermediate directories") {
     assertEqual(loaded.workspacePaths.count, 1)
 }
 
+// MARK: - AppConfig autoReconnect Tests
+
+print("\n=== AppConfig autoReconnect Tests ===")
+
+test("autoReconnect defaults to false") {
+    assertEqual(AppConfig().autoReconnect, false)
+}
+
+test("autoReconnect round-trips through save/load") {
+    let dir = try makeTempDir()
+    let store = ConfigStore(directory: dir)
+    try store.saveAppConfig(AppConfig(workspacePaths: ["/tmp/ws"], autoReconnect: true))
+    let loaded = try store.loadAppConfig()
+    assertEqual(loaded.autoReconnect, true)
+    assertEqual(loaded.workspacePaths.count, 1)
+}
+
+test("legacy config without autoReconnect decodes to false and keeps workspacePaths") {
+    let legacy = #"{"version":1,"workspacePaths":["/tmp/ws1","/tmp/ws2"]}"#
+    let cfg = try JSONDecoder().decode(AppConfig.self, from: Data(legacy.utf8))
+    assertEqual(cfg.autoReconnect, false)
+    assertEqual(cfg.workspacePaths.count, 2)
+}
+
 // MARK: - PortChecker Tests
 
 print("\n=== PortChecker Tests ===")
