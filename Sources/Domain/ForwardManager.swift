@@ -16,6 +16,12 @@ public final class ForwardManager: ObservableObject {
     @Published public var workspaces: [Workspace] = []
     @Published public var states: [UUID: ForwardState] = [:]
     @Published public var isConnectingAll = false
+    @Published public var autoReconnect: Bool {
+        didSet {
+            saveAppConfig()
+            if !autoReconnect { cancelAllReconnects() }
+        }
+    }
 
     private var runners: [UUID: ProcessRunning] = [:]
     private let configStore: ConfigStore
@@ -25,6 +31,9 @@ public final class ForwardManager: ObservableObject {
     private var connectAllTask: Task<Void, Never>?
     private var healthCheckTask: Task<Void, Never>?
     private let healthCheckInterval: TimeInterval
+    private let maxReconnectAttempts: Int
+    private let reconnectDelay: TimeInterval
+    private var reconnectTasks: [UUID: Task<Void, Never>] = [:]
 
     private static let credentialErrorPatterns = [
         "getting credentials",
@@ -48,13 +57,18 @@ public final class ForwardManager: ObservableObject {
         runnerFactory: ProcessRunnerFactory = DefaultProcessRunnerFactory(),
         credentialRefresher: CredentialRefreshing = KubectlCredentialRefresher(),
         notifier: PortDropNotifying? = nil,
-        healthCheckInterval: TimeInterval = 10
+        healthCheckInterval: TimeInterval = 10,
+        maxReconnectAttempts: Int = 5,
+        reconnectDelay: TimeInterval = 3
     ) {
         self.configStore = configStore
         self.runnerFactory = runnerFactory
         self.credentialRefresher = credentialRefresher
         self.notifier = notifier
         self.healthCheckInterval = healthCheckInterval
+        self.maxReconnectAttempts = maxReconnectAttempts
+        self.reconnectDelay = reconnectDelay
+        self.autoReconnect = configStore.loadAppConfigOrDefault().autoReconnect
         self.workspaces = configStore.loadAllWorkspaces()
         for fwd in allForwards {
             states[fwd.id] = .idle
@@ -257,8 +271,12 @@ public final class ForwardManager: ObservableObject {
     // MARK: - Persistence
 
     private func saveAppConfig() {
-        let config = AppConfig(workspacePaths: workspaces.map(\.path))
+        let config = AppConfig(workspacePaths: workspaces.map(\.path), autoReconnect: autoReconnect)
         try? configStore.saveAppConfig(config)
+    }
+
+    private func cancelAllReconnects() {
+        for (_, task) in reconnectTasks { task.cancel() }
     }
 
     private func saveWorkspaceConfig(_ workspace: Workspace) {

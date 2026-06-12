@@ -393,6 +393,53 @@ await testAsync("Reconnect by forwardId calls connect") {
     assertEqual(state, .ready, "should be ready after reconnect")
 }
 
+// MARK: - ForwardManager autoReconnect Tests
+
+print("\n=== ForwardManager autoReconnect Tests ===")
+
+await testAsync("autoReconnect defaults to false for a fresh manager") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 2,
+        reconnectDelay: 0.01
+    )
+    let value = await MainActor.run { manager.autoReconnect }
+    assert(!value, "autoReconnect should default to false")
+}
+
+await testAsync("autoReconnect initializes from config") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    try store.saveAppConfig(AppConfig(workspacePaths: [], autoReconnect: true))
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+    let value = await MainActor.run { manager.autoReconnect }
+    assert(value, "autoReconnect should initialize true from config")
+}
+
+await testAsync("Setting autoReconnect persists to config.json") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: MockRunnerFactory(),
+        notifier: nil,
+        healthCheckInterval: 999
+    )
+    await MainActor.run { manager.autoReconnect = true }
+    let reloaded = store.loadAppConfigOrDefault()
+    assert(reloaded.autoReconnect, "toggling autoReconnect should persist to config.json")
+}
+
 // MARK: - Forward Status Property Tests
 
 print("\n=== Forward Status Property Tests ===")
