@@ -182,10 +182,7 @@ public final class ForwardManager: ObservableObject {
 
         runner.onTerminatedAfterReady = { [weak self] code, reason in
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.runners[forward.id] = nil
-                self.states[forward.id] = .failed("Disconnected (exit \(code)): \(reason)")
-                self.notifier?.sendPortDropped(forward: forward)
+                self?.handleDrop(forward, reason: "Disconnected (exit \(code)): \(reason)")
             }
         }
 
@@ -213,6 +210,42 @@ public final class ForwardManager: ObservableObject {
     public func reconnect(forwardId: UUID) {
         guard let forward = allForwards.first(where: { $0.id == forwardId }) else { return }
         Task { await connect(forward) }
+    }
+
+    // MARK: - Drop handling / auto-reconnect
+
+    private func handleDrop(_ forward: PortForward, reason: String) {
+        runners[forward.id]?.stop()
+        runners[forward.id] = nil
+        guard autoReconnect else {
+            states[forward.id] = .failed(reason)
+            notifier?.sendPortDropped(forward: forward)
+            return
+        }
+        startReconnect(forward)
+    }
+
+    private func startReconnect(_ forward: PortForward) {
+        guard reconnectTasks[forward.id] == nil else { return }  // dedupe simultaneous drop signals
+        states[forward.id] = .starting                           // reflect "reconnecting"; health check skips it
+        reconnectTasks[forward.id] = Task {
+            defer { reconnectTasks[forward.id] = nil }
+            for _ in 1...maxReconnectAttempts {
+                if Task.isCancelled { return }
+                try? await Task.sleep(nanoseconds: UInt64(reconnectDelay * 1_000_000_000))
+                if Task.isCancelled { return }
+                await connect(forward)  // waits for the user to authenticate inside connect()
+                if Task.isCancelled {
+                    runners[forward.id]?.stop()
+                    runners[forward.id] = nil
+                    states[forward.id] = .stopped
+                    return
+                }
+                if states[forward.id] == .ready { return }
+            }
+            states[forward.id] = .failed("Reconnect failed after \(maxReconnectAttempts) attempts")
+            notifier?.sendPortDropped(forward: forward)
+        }
     }
 
     public func disconnectAll() {
@@ -315,10 +348,7 @@ public final class ForwardManager: ObservableObject {
             switch current {
             case .ready:
                 if !portOpen {
-                    runners[fwd.id]?.stop()
-                    runners[fwd.id] = nil
-                    states[fwd.id] = .failed("Connection lost")
-                    notifier?.sendPortDropped(forward: fwd)
+                    handleDrop(fwd, reason: "Connection lost")
                 }
             case .idle, .stopped, .failed:
                 if portOpen && runners[fwd.id] == nil {

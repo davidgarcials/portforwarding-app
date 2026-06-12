@@ -299,9 +299,11 @@ final class MockNotifier: PortDropNotifying {
 
 final class MockRunnerFactory: ProcessRunnerFactory {
     var lastRunner: MockProcessRunner?
+    var madeCount = 0
     func makeRunner(for forward: PortForward) -> ProcessRunning {
         let runner = MockProcessRunner()
         lastRunner = runner
+        madeCount += 1
         return runner
     }
 }
@@ -438,6 +440,143 @@ await testAsync("Setting autoReconnect persists to config.json") {
     await MainActor.run { manager.autoReconnect = true }
     let reloaded = store.loadAppConfigOrDefault()
     assert(reloaded.autoReconnect, "toggling autoReconnect should persist to config.json")
+}
+
+// MARK: - Auto-Reconnect Behavior Tests
+
+print("\n=== Auto-Reconnect Behavior Tests ===")
+
+await testAsync("autoReconnect ON: drop triggers successful reconnect, no notification") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-ok", localPort: 59470)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    let firstRunner = factory.lastRunner!
+    await MainActor.run { firstRunner.onTerminatedAfterReady?(1, "boom") }
+    try await Task.sleep(nanoseconds: 300_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "should auto-reconnect to ready")
+    assertEqual(notifier.droppedForwards.count, 0, "no notification while auto-reconnecting")
+}
+
+await testAsync("autoReconnect ON: duplicate drop signals start only one reconnect") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let factory = MockRunnerFactory()
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: nil,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 0.05
+    )
+    let fwd = makeForward(name: "ar-dedup", localPort: 59474)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)                       // makeRunner #1
+    let firstRunner = factory.lastRunner!
+    await MainActor.run {
+        firstRunner.onTerminatedAfterReady?(1, "boom")
+        firstRunner.onTerminatedAfterReady?(1, "boom-again")
+    }
+    try await Task.sleep(nanoseconds: 300_000_000)
+    let count = await MainActor.run { factory.madeCount }
+    assertEqual(count, 2, "one initial + one reconnect runner (duplicate drop deduped)")
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "should be ready after a single reconnect")
+}
+
+await testAsync("autoReconnect ON: exhausts attempts then fails and notifies once") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let netErr = ProcessRunnerError.processExited(code: 1, output: "pod not found")
+    let initial = MockProcessRunner()
+    let factory = SequentialMockRunnerFactory(runners: [
+        initial,
+        FailingMockRunner(error: netErr),
+        FailingMockRunner(error: netErr),
+    ])
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 2,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-fail", localPort: 59471)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    await MainActor.run { initial.onTerminatedAfterReady?(1, "boom") }
+    try await Task.sleep(nanoseconds: 400_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    if case .failed(let msg) = state {
+        assert(msg.contains("Reconnect failed after 2 attempts"), "got: \(msg)")
+    } else {
+        assert(false, "expected failed, got: \(String(describing: state))")
+    }
+    assertEqual(notifier.droppedForwards.count, 1, "should notify once on give-up")
+}
+
+await testAsync("autoReconnect ON: reconnect succeeds after credential refresh") {
+    let tmpDir = try makeTempDir()
+    let store = ConfigStore(directory: tmpDir)
+    let notifier = MockNotifier()
+    let credErr = ProcessRunnerError.processExited(code: 1, output: "getting credentials: exec plugin error")
+    let initial = MockProcessRunner()
+    let factory = SequentialMockRunnerFactory(runners: [
+        initial,
+        FailingMockRunner(error: credErr),
+        MockProcessRunner(),
+    ])
+    let refresher = MockCredentialRefresher()
+    refresher.result = true
+    let manager = await ForwardManager(
+        configStore: store,
+        runnerFactory: factory,
+        credentialRefresher: refresher,
+        notifier: notifier,
+        healthCheckInterval: 999,
+        maxReconnectAttempts: 5,
+        reconnectDelay: 0.01
+    )
+    let fwd = makeForward(name: "ar-cred", localPort: 59472)
+    let ws = Workspace(path: tmpDir.path, forwards: [fwd])
+    await MainActor.run {
+        manager.workspaces = [ws]
+        manager.autoReconnect = true
+    }
+    await manager.connect(fwd)
+    await MainActor.run { initial.onTerminatedAfterReady?(1, "boom") }
+    try await Task.sleep(nanoseconds: 300_000_000)
+    let state = await MainActor.run { manager.states[fwd.id] }
+    assertEqual(state, .ready, "reconnect should authenticate then succeed")
+    assert(refresher.refreshCalled, "should refresh credentials during reconnect")
+    assertEqual(notifier.droppedForwards.count, 0, "no notification on successful reconnect")
 }
 
 // MARK: - Forward Status Property Tests
