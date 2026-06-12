@@ -1,8 +1,9 @@
 ---
-status: approved
+status: in_progress
 created: 2026-06-12
 approved_at: "2026-06-12T09:41:30.582Z"
-updated: "2026-06-12T09:41:30.583Z"
+updated: "2026-06-12T09:42:28.858Z"
+started_at: "2026-06-12T09:42:28.858Z"
 ---
 # Feature: Auto-reconnect on port-forward drop (Settings toggle, default OFF)
 
@@ -314,14 +315,14 @@ consumes a retry nor gets aborted by our timer.
 
 ## Acceptance Criteria
 
-- [ ] Settings window shows an "Automatically reconnect dropped forwards" toggle, **OFF by default**.
-- [ ] The setting persists in `config.json` and reloads on launch; existing configs (no key) load fine.
-- [ ] OFF: a dropped forward goes to `.failed` and sends one drop notification (unchanged).
-- [ ] ON: a dropped `.ready` forward auto-reconnects to `.ready` with no drop notification.
-- [ ] ON: a reconnect needing re-auth waits for the user (no abort, no wasted retry).
-- [ ] ON + unrecoverable: after N (5) attempts → `.failed("Reconnect failed after N attempts")` + one notification.
-- [ ] Manually disconnecting (or toggling the setting OFF) during a reconnect stops it cleanly.
-- [ ] `make test` green (new + existing tests).
+- [x] Settings window shows an "Automatically reconnect dropped forwards" toggle, **OFF by default**.
+- [x] The setting persists in `config.json` and reloads on launch; existing configs (no key) load fine.
+- [x] OFF: a dropped forward goes to `.failed` and sends one drop notification (unchanged).
+- [x] ON: a dropped `.ready` forward auto-reconnects to `.ready` with no drop notification.
+- [x] ON: a reconnect needing re-auth waits for the user (no abort, no wasted retry).
+- [x] ON + unrecoverable: after N (5) attempts → `.failed("Reconnect failed after N attempts")` + one notification.
+- [x] Manually disconnecting (or toggling the setting OFF) during a reconnect stops it cleanly.
+- [x] `make test` green (new + existing tests).
 
 ## Out of Scope (YAGNI)
 
