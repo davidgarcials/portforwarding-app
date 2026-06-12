@@ -1,0 +1,20 @@
+plans/20260612-auto-reconnect-on-drop.md
+  s_deabe9819415f9::t_1388414df0df04 2-5
+  s_deabe9819415f9::t_d9a465ab8bd39b 1,6-342
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "a7a3d631defd39993f5620087fae2ae1903814e1",
+  "prompts": {},
+  "sessions": {
+    "s_deabe9819415f9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a34dd88f-f25e-45c7-b118-d7f30c60d714",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "david.garcia <david.garcia@lansweeper.com>"
+    }
+  }
+}
